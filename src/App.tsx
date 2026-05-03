@@ -12,7 +12,6 @@ import {
   getTimestamp,
   makeId,
   type Account,
-  type CashflowType,
   type Category,
   type MoneyTransaction,
   type PrimaryCurrency,
@@ -72,6 +71,7 @@ function App() {
   const [tab, setTab] = useState<Tab>('dashboard')
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [quickAddStep, setQuickAddStep] = useState<QuickAddStep>('type')
+  const [dashboardFiltersOpen, setDashboardFiltersOpen] = useState(false)
   const [snapshot, setSnapshot] = useState<Snapshot>({ accounts: [], categories: [], transactions: [] })
   const [primaryCurrency, setPrimaryCurrency] = useState<PrimaryCurrency>('IDR')
   const [filters, setFilters] = useState<ReportFilters>({
@@ -297,10 +297,12 @@ function App() {
           <DashboardTab
             accounts={activeAccounts}
             categories={snapshot.categories}
+            filtersOpen={dashboardFiltersOpen}
             filters={filters}
             formatMoney={formatMoney}
             reportTotals={reportTotals}
             setFilters={setFilters}
+            setFiltersOpen={setDashboardFiltersOpen}
             topCategories={topCategories}
             transactions={filteredTransactions.slice(0, 5)}
           />
@@ -364,34 +366,79 @@ function DashboardTab({
   accounts,
   categories,
   filters,
+  filtersOpen,
   formatMoney,
   reportTotals,
   setFilters,
+  setFiltersOpen,
   topCategories,
   transactions,
 }: {
   accounts: Account[]
   categories: Category[]
   filters: ReportFilters
+  filtersOpen: boolean
   formatMoney: FormatMoney
   reportTotals: { income: number; expense: number; net: number }
   setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
+  setFiltersOpen: React.Dispatch<React.SetStateAction<boolean>>
   topCategories: Array<{ category: Category; amount: number }>
   transactions: MoneyTransaction[]
 }) {
+  const selectedAccount = accounts.find((account) => account.id === filters.accountId)
+  const selectedCategory = categories.find((category) => category.id === filters.categoryId)
+
   return (
-    <>
-      <ReportFiltersPanel accounts={accounts} categories={categories} filters={filters} setFilters={setFilters} />
-      <section className="metrics-grid" aria-label="Filtered summary">
-        <Metric formatMoney={formatMoney} label="Income" value={reportTotals.income} tone="income" />
-        <Metric formatMoney={formatMoney} label="Expense" value={reportTotals.expense} tone="expense" />
-        <Metric formatMoney={formatMoney} label="Net Cashflow" value={reportTotals.net} tone={reportTotals.net >= 0 ? 'income' : 'expense'} />
+    <section className="dashboard-stack">
+      <Card className="dashboard-toolbar">
+        <div>
+          <span className="toolbar-kicker">Report</span>
+          <h2>{formatMonthLabel(filters.month)}</h2>
+        </div>
+        <div className="filter-chips" aria-label="Active filters">
+          <span>{selectedAccount?.name || 'Semua Akun'}</span>
+          <span>{selectedCategory ? `${selectedCategory.icon} ${selectedCategory.name}` : 'Semua Kategori'}</span>
+          <span>{filters.type === 'all' ? 'Semua Tipe' : filters.type}</span>
+        </div>
+        <Button size="sm" variant="outline" type="button" onClick={() => setFiltersOpen((current) => !current)}>
+          {filtersOpen ? 'Tutup Filter' : 'Filter'}
+        </Button>
+      </Card>
+
+      {filtersOpen && <ReportFiltersPanel compact accounts={accounts} categories={categories} filters={filters} setFilters={setFilters} />}
+
+      <OverviewPanel formatMoney={formatMoney} totals={reportTotals} />
+
+      <section className="dashboard-grid">
+        <TopCategoriesPanel compact expense={reportTotals.expense} formatMoney={formatMoney} topCategories={topCategories.slice(0, 3)} />
+        <TransactionsPanel compact accounts={accounts} categories={categories} formatMoney={formatMoney} onDelete={null} title="Recent Activity" transactions={transactions.slice(0, 3)} />
       </section>
-      <section className="content-grid">
-        <TopCategoriesPanel expense={reportTotals.expense} formatMoney={formatMoney} topCategories={topCategories} />
-        <TransactionsPanel accounts={accounts} categories={categories} formatMoney={formatMoney} onDelete={null} title="Recent Filtered Log" transactions={transactions} />
-      </section>
-    </>
+    </section>
+  )
+}
+
+function OverviewPanel({ formatMoney, totals }: { formatMoney: FormatMoney; totals: { income: number; expense: number; net: number } }) {
+  return (
+    <Card className="overview-card">
+      <div className="overview-heading">
+        <span>This month</span>
+        <strong className={totals.net >= 0 ? 'income' : 'expense'}>{formatMoney(totals.net)}</strong>
+      </div>
+      <div className="overview-grid">
+        <div>
+          <span>Income</span>
+          <strong className="income">{formatMoney(totals.income)}</strong>
+        </div>
+        <div>
+          <span>Expense</span>
+          <strong className="expense">{formatMoney(totals.expense)}</strong>
+        </div>
+        <div>
+          <span>Net</span>
+          <strong className={totals.net >= 0 ? 'income' : 'expense'}>{formatMoney(totals.net)}</strong>
+        </div>
+      </div>
+    </Card>
   )
 }
 
@@ -594,16 +641,18 @@ function AccountsTab({
 function ReportFiltersPanel({
   accounts,
   categories,
+  compact = false,
   filters,
   setFilters,
 }: {
   accounts: Account[]
   categories: Category[]
+  compact?: boolean
   filters: ReportFilters
   setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
 }) {
   return (
-    <Card className="filter-panel">
+    <Card className={compact ? 'filter-panel compact-filter-panel' : 'filter-panel'}>
       <Label>
         Bulan
         <Input type="month" value={filters.month} onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))} />
@@ -742,18 +791,20 @@ function TransactionFormPanel({
 }
 
 function TopCategoriesPanel({
+  compact = false,
   expense,
   formatMoney,
   topCategories,
 }: {
+  compact?: boolean
   expense: number
   formatMoney: FormatMoney
   topCategories: Array<{ category: Category; amount: number }>
 }) {
   return (
-    <Card>
+    <Card className={compact ? 'compact-panel' : ''}>
       <CardHeader className="panel-heading">
-        <CardTitle>Top Categories</CardTitle>
+        <CardTitle>{compact ? 'Top Spending' : 'Top Categories'}</CardTitle>
         <CardDescription>Expense sesuai filter report.</CardDescription>
       </CardHeader>
       <CardContent className="category-list">
@@ -763,6 +814,7 @@ function TopCategoriesPanel({
             <div>
               <strong>{category.name}</strong>
               <small>{Math.round((amount / Math.max(expense, 1)) * 100)}% dari expense</small>
+              {compact && <span className="spending-bar"><span style={{ width: `${Math.round((amount / Math.max(expense, 1)) * 100)}%`, background: category.color }} /></span>}
             </div>
             <span>{formatMoney(amount)}</span>
           </div>
@@ -775,6 +827,7 @@ function TopCategoriesPanel({
 function TransactionsPanel({
   accounts,
   categories,
+  compact = false,
   formatMoney,
   onDelete,
   title,
@@ -782,18 +835,19 @@ function TransactionsPanel({
 }: {
   accounts: Account[]
   categories: Category[]
+  compact?: boolean
   formatMoney: FormatMoney
   onDelete: ((id: string) => void) | null
   title: string
   transactions: MoneyTransaction[]
 }) {
   return (
-    <Card className="transaction-list-panel">
+    <Card className={compact ? 'transaction-list-panel compact-panel' : 'transaction-list-panel'}>
       <CardHeader className="panel-heading">
         <CardTitle>{title}</CardTitle>
         <CardDescription>{transactions.length} transaksi.</CardDescription>
       </CardHeader>
-      <CardContent className="transaction-list">
+      <CardContent className={compact ? 'transaction-list compact-transaction-list' : 'transaction-list'}>
         {transactions.length === 0 ? <p className="empty-state">Belum ada transaksi pada filter ini.</p> : transactions.map((transaction) => (
           <TransactionItem accounts={accounts} categories={categories} formatMoney={formatMoney} key={transaction.id} onDelete={onDelete} transaction={transaction} />
         ))}
@@ -838,19 +892,21 @@ function TransactionItem({
   )
 }
 
-function Metric({ formatMoney, label, value, tone }: { formatMoney: FormatMoney; label: string; value: number; tone: CashflowType }) {
-  return (
-    <Card className={`metric-card ${tone}`}>
-      <span>{label}</span>
-      <strong>{formatMoney(value)}</strong>
-    </Card>
-  )
-}
-
 function formatTransactionAmount(transaction: MoneyTransaction, formatMoney: FormatMoney) {
   if (transaction.type === 'income') return `+${formatMoney(transaction.amount)}`
   if (transaction.type === 'expense') return `-${formatMoney(transaction.amount)}`
   return formatMoney(transaction.amount)
+}
+
+function formatMonthLabel(month: string) {
+  if (!month) return 'Semua Bulan'
+  const [year, monthIndex] = month.split('-').map(Number)
+  if (!year || !monthIndex) return month
+
+  return new Intl.DateTimeFormat('id-ID', {
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(year, monthIndex - 1, 1))
 }
 
 export default App

@@ -70,6 +70,109 @@
   gap: 16px;
 }
 
+.dashboard-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dashboard-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.dashboard-toolbar {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 16px;
+}
+
+.toolbar-kicker {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.dashboard-toolbar h2 {
+  font-size: 1.1rem;
+  margin-top: 2px;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.filter-chips span {
+  background: var(--soft-bg);
+  border-radius: 999px;
+  color: var(--text-h);
+  font-size: 0.78rem;
+  font-weight: 800;
+  max-width: 180px;
+  overflow: hidden;
+  padding: 7px 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.overview-card {
+  padding: 18px;
+}
+
+.overview-heading {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.overview-heading span,
+.overview-grid span {
+  color: var(--muted);
+  font-weight: 750;
+}
+
+.overview-heading strong {
+  font-size: clamp(1.15rem, 4vw, 1.8rem);
+  letter-spacing: -0.05em;
+}
+
+.overview-grid {
+  background: var(--soft-bg);
+  border-radius: 22px;
+  display: grid;
+  gap: 1px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  overflow: hidden;
+}
+
+.overview-grid > div {
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.overview-grid strong {
+  font-size: clamp(0.95rem, 3vw, 1.25rem);
+  letter-spacing: -0.04em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .metrics-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
@@ -87,6 +190,10 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.compact-filter-panel {
+  animation: filter-in 160ms ease-out;
+}
+
 .tab-nav {
   background: var(--surface);
   border: 1px solid var(--border);
@@ -96,8 +203,6 @@
   gap: 6px;
   grid-template-columns: repeat(3, 1fr);
   padding: 6px;
-  position: sticky;
-  top: 12px;
   z-index: 5;
 }
 
@@ -299,6 +404,10 @@ button:focus-visible {
   gap: 12px;
 }
 
+.compact-panel {
+  padding: 18px;
+}
+
 .category-row,
 .transaction-item,
 .account-item {
@@ -308,6 +417,18 @@ button:focus-visible {
   display: grid;
   gap: 12px;
   padding: 12px;
+}
+
+.compact-panel .category-row,
+.compact-transaction-list .transaction-item {
+  background: transparent;
+  border-radius: 16px;
+  padding: 8px 0;
+}
+
+.compact-panel .category-row + .category-row,
+.compact-transaction-list .transaction-item + .transaction-item {
+  border-top: 1px solid var(--border);
 }
 
 .category-row {
@@ -358,6 +479,33 @@ button:focus-visible {
   display: block;
   line-height: 1.35;
   margin-top: 2px;
+}
+
+.spending-bar {
+  background: color-mix(in srgb, var(--border) 50%, transparent);
+  border-radius: 999px;
+  display: block;
+  height: 5px;
+  margin-top: 8px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.spending-bar span {
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+@keyframes filter-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .transaction-main {
@@ -523,7 +671,17 @@ button:focus-visible {
   .metrics-grid,
   .content-grid,
   .accounts-grid,
-  .filter-panel {
+  .filter-panel,
+  .dashboard-grid,
+  .dashboard-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-chips {
+    justify-content: flex-start;
+  }
+
+  .overview-grid {
     grid-template-columns: 1fr;
   }
 

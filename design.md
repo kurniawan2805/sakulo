@@ -15,7 +15,7 @@ Tahap awal fokus pada penggunaan lokal di satu device. Cloud sync, Google Sheets
 - Frontend: Vite, React, TypeScript
 - Local database: Dexie.js di atas IndexedDB
 - PWA: manual `manifest.webmanifest` dan `sw.js`
-- Styling: CSS custom, mobile-first
+- Styling: Tailwind CSS with shadcn-style local components, backed by CSS variables
 - Backend: belum ada
 - Auth: belum ada
 - Sync: belum ada
@@ -25,6 +25,8 @@ Tahap awal fokus pada penggunaan lokal di satu device. Cloud sync, Google Sheets
 ```text
 React PWA
   -> src/App.tsx       UI, forms, tabs
+  -> src/components/ui shadcn-style primitives
+  -> src/lib/utils.ts  className merge helper
   -> src/db.ts         Dexie schema, seed data, ID/timestamp helpers
   -> src/money.ts      balance, filter, report calculations
   -> IndexedDB         persistent local storage
@@ -35,7 +37,33 @@ Prinsip arsitektur:
 - Local-first: semua data tersimpan di browser user melalui IndexedDB.
 - Offline-ready: app shell bisa dibuka offline melalui service worker.
 - Sync-ready: setiap entity punya `id`, `createdAt`, dan `updatedAt` agar nanti bisa disinkronkan.
-- Minimal abstraction: UI masih di `App.tsx` supaya MVP cepat, logic kalkulasi dipisah ke `money.ts` agar tidak tercampur dengan rendering.
+- Minimal abstraction: domain logic is separated into `money.ts` and `currency.ts`; UI primitives live in `src/components/ui`.
+
+## UI Component System
+
+The app uses a staged shadcn/ui migration instead of a full rewrite.
+
+Implemented local primitives:
+
+- `Button`
+- `Card`
+- `Input`
+- `Label`
+- `Select`
+- `Tabs`
+
+The components follow shadcn conventions:
+
+- Radix primitives for interactive controls where useful.
+- `class-variance-authority` for button variants.
+- `cn()` helper with `clsx` and `tailwind-merge`.
+- Theme values flow through CSS variables so light/dark colors stay centralized.
+
+Future shadcn candidates:
+
+- Dialog for destructive confirmations.
+- Calendar/date picker for richer date selection.
+- Popover/Command for searchable account/category pickers.
 
 ## Main Screens
 
@@ -311,9 +339,9 @@ Technical UI rules:
 
 Styling direction:
 
-- Current MVP uses CSS variables and custom CSS.
-- Near-term UI migration target is shadcn/ui with Tailwind, starting from `button`, `card`, `input`, `select`, `tabs`, and `label`.
-- Date picker can be introduced after shadcn base components are in place.
+- Current MVP uses Tailwind CSS and shadcn-style local components.
+- CSS variables define theme color tokens and feed the component layer.
+- Date picker can be introduced after the base component system stays stable.
 
 ## Current Limitations
 
@@ -337,7 +365,8 @@ Styling direction:
 - Manage categories
 - Budget per category/month
 - Better month navigation
-- Migrate base UI components to shadcn/ui
+- Add shadcn-style Dialog for archive/delete confirmations
+- Add shadcn-style Calendar/Popover date picker
 - Empty-state onboarding
 
 ### Medium Term

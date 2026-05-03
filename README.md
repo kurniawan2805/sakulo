@@ -12,6 +12,7 @@ saku.lo is a local-first PWA for tracking personal income, expenses, account bal
 - Primary currency setting for IDR, SAR, and USD
 - Minor-unit money storage to avoid floating point errors
 - PWA manifest and service worker for installable/offline app shell
+- Tailwind CSS with shadcn-style local UI components
 
 ## Development
 

@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import './App.css'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   db,
   getTimestamp,
@@ -264,57 +270,59 @@ function App() {
         </div>
       </section>
 
-      <nav className="tab-nav" aria-label="Main navigation">
-        <TabButton active={tab === 'dashboard'} label="Dashboard" onClick={() => setTab('dashboard')} />
-        <TabButton active={tab === 'log'} label="Log" onClick={() => setTab('log')} />
-        <TabButton active={tab === 'accounts'} label="Akun" onClick={() => setTab('accounts')} />
-      </nav>
+      <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
+        <TabsList className="tab-nav" aria-label="Main navigation">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="log">Log</TabsTrigger>
+          <TabsTrigger value="accounts">Akun</TabsTrigger>
+        </TabsList>
 
-      {tab === 'dashboard' && (
-        <DashboardTab
-          accounts={activeAccounts}
-          categories={snapshot.categories}
-          filters={filters}
-          formatMoney={formatMoney}
-          reportTotals={reportTotals}
-          setFilters={setFilters}
-          topCategories={topCategories}
-          transactions={filteredTransactions.slice(0, 5)}
-        />
-      )}
+        <TabsContent value="dashboard">
+          <DashboardTab
+            accounts={activeAccounts}
+            categories={snapshot.categories}
+            filters={filters}
+            formatMoney={formatMoney}
+            reportTotals={reportTotals}
+            setFilters={setFilters}
+            topCategories={topCategories}
+            transactions={filteredTransactions.slice(0, 5)}
+          />
+        </TabsContent>
 
-      {tab === 'log' && (
-        <LogTab
-          accounts={activeAccounts}
-          categories={snapshot.categories}
-          cashflowCategories={cashflowCategories}
-          deleteTransaction={deleteTransaction}
-          filters={filters}
-          formatMoney={formatMoney}
-          form={transactionForm}
-          saveTransaction={saveTransaction}
-          setFilters={setFilters}
-          setForm={setTransactionForm}
-          transactions={filteredTransactions}
-          updateTransactionType={updateTransactionType}
-        />
-      )}
+        <TabsContent value="log">
+          <LogTab
+            accounts={activeAccounts}
+            categories={snapshot.categories}
+            cashflowCategories={cashflowCategories}
+            deleteTransaction={deleteTransaction}
+            filters={filters}
+            formatMoney={formatMoney}
+            form={transactionForm}
+            saveTransaction={saveTransaction}
+            setFilters={setFilters}
+            setForm={setTransactionForm}
+            transactions={filteredTransactions}
+            updateTransactionType={updateTransactionType}
+          />
+        </TabsContent>
 
-      {tab === 'accounts' && (
-        <AccountsTab
-          accountBalances={accountBalances}
-          accountForm={accountForm}
-          accounts={activeAccounts}
-          archiveAccount={archiveAccount}
-          editAccount={editAccount}
-          formatMoney={formatMoney}
-          isCurrencyLocked={isCurrencyLocked}
-          primaryCurrency={primaryCurrency}
-          saveAccount={saveAccount}
-          setAccountForm={setAccountForm}
-          updatePrimaryCurrency={updatePrimaryCurrency}
-        />
-      )}
+        <TabsContent value="accounts">
+          <AccountsTab
+            accountBalances={accountBalances}
+            accountForm={accountForm}
+            accounts={activeAccounts}
+            archiveAccount={archiveAccount}
+            editAccount={editAccount}
+            formatMoney={formatMoney}
+            isCurrencyLocked={isCurrencyLocked}
+            primaryCurrency={primaryCurrency}
+            saveAccount={saveAccount}
+            setAccountForm={setAccountForm}
+            updatePrimaryCurrency={updatePrimaryCurrency}
+          />
+        </TabsContent>
+      </Tabs>
     </main>
   )
 }
@@ -427,51 +435,57 @@ function AccountsTab({
   return (
     <section className="content-grid accounts-grid">
       <form className="panel transaction-form" onSubmit={saveAccount}>
-        <div className="panel-heading">
-          <h2>{accountForm.id ? 'Edit Akun' : 'Tambah Akun'}</h2>
-          <p>Untuk bank, cash, e-wallet, atau kartu.</p>
-        </div>
-        <label>
+        <CardHeader className="panel-heading">
+          <CardTitle>{accountForm.id ? 'Edit Akun' : 'Tambah Akun'}</CardTitle>
+          <CardDescription>Untuk bank, cash, e-wallet, atau kartu.</CardDescription>
+        </CardHeader>
+        <Label>
           Mata Uang Utama
-          <select disabled={isCurrencyLocked} value={primaryCurrency} onChange={(event) => updatePrimaryCurrency(event.target.value as PrimaryCurrency)}>
-            {currencyOptions.map((option) => <option key={option.code} value={option.code}>{option.code} - {option.label}</option>)}
-          </select>
+          <Select disabled={isCurrencyLocked} value={primaryCurrency} onValueChange={(value) => updatePrimaryCurrency(value as PrimaryCurrency)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {currencyOptions.map((option) => <SelectItem key={option.code} value={option.code}>{option.code} - {option.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
           {isCurrencyLocked && <span className="helper-text">Currency dikunci setelah ada transaksi untuk mencegah saldo terbaca salah.</span>}
-        </label>
-        <label>
+        </Label>
+        <Label>
           Nama Akun
-          <input required placeholder="BCA, Cash, ShopeePay" value={accountForm.name} onChange={(event) => setAccountForm({ ...accountForm, name: event.target.value })} />
-        </label>
+          <Input required placeholder="BCA, Cash, ShopeePay" value={accountForm.name} onChange={(event) => setAccountForm({ ...accountForm, name: event.target.value })} />
+        </Label>
         <div className="form-row">
-          <label>
+          <Label>
             Tipe
-            <select value={accountForm.type} onChange={(event) => setAccountForm({ ...accountForm, type: event.target.value as Account['type'] })}>
-              <option value="cash">Cash</option>
-              <option value="bank">Bank</option>
-              <option value="ewallet">E-wallet</option>
-              <option value="card">Card</option>
-            </select>
-          </label>
-          <label>
+            <Select value={accountForm.type} onValueChange={(value) => setAccountForm({ ...accountForm, type: value as Account['type'] })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="bank">Bank</SelectItem>
+                <SelectItem value="ewallet">E-wallet</SelectItem>
+                <SelectItem value="card">Card</SelectItem>
+              </SelectContent>
+            </Select>
+          </Label>
+          <Label>
             Warna
-            <input type="color" value={accountForm.color} onChange={(event) => setAccountForm({ ...accountForm, color: event.target.value })} />
-          </label>
+            <Input type="color" value={accountForm.color} onChange={(event) => setAccountForm({ ...accountForm, color: event.target.value })} />
+          </Label>
         </div>
-        <label>
+        <Label>
           Initial Balance
-          <input inputMode="decimal" type="number" value={accountForm.initialBalance} onChange={(event) => setAccountForm({ ...accountForm, initialBalance: event.target.value })} />
-        </label>
+          <Input inputMode="decimal" type="number" value={accountForm.initialBalance} onChange={(event) => setAccountForm({ ...accountForm, initialBalance: event.target.value })} />
+        </Label>
         <div className="button-row">
-          <button className="primary-button" type="submit">{accountForm.id ? 'Update Akun' : 'Simpan Akun'}</button>
-          {accountForm.id && <button className="ghost-button" type="button" onClick={() => setAccountForm(emptyAccountForm)}>Batal</button>}
+          <Button variant="income" type="submit">{accountForm.id ? 'Update Akun' : 'Simpan Akun'}</Button>
+          {accountForm.id && <Button variant="ghost" type="button" onClick={() => setAccountForm(emptyAccountForm)}>Batal</Button>}
         </div>
       </form>
-      <section className="panel">
-        <div className="panel-heading">
-          <h2>Daftar Akun</h2>
-          <p>{accounts.length} akun aktif.</p>
-        </div>
-        <div className="account-list">
+      <Card>
+        <CardHeader className="panel-heading">
+          <CardTitle>Daftar Akun</CardTitle>
+          <CardDescription>{accounts.length} akun aktif.</CardDescription>
+        </CardHeader>
+        <CardContent className="account-list">
           {accounts.map((account) => (
             <article className="account-item" key={account.id}>
               <span className="account-dot" style={{ background: account.color }} />
@@ -481,13 +495,13 @@ function AccountsTab({
               </div>
               <strong>{formatMoney(accountBalances.get(account.id) || 0)}</strong>
               <div className="account-actions">
-                <button className="ghost-button" type="button" onClick={() => editAccount(account)}>Edit</button>
-                <button className="ghost-button danger" type="button" onClick={() => archiveAccount(account)}>Archive</button>
+                <Button size="sm" variant="ghost" type="button" onClick={() => editAccount(account)}>Edit</Button>
+                <Button size="sm" variant="destructive" type="button" onClick={() => archiveAccount(account)}>Archive</Button>
               </div>
             </article>
           ))}
-        </div>
-      </section>
+        </CardContent>
+      </Card>
     </section>
   )
 }
@@ -504,35 +518,44 @@ function ReportFiltersPanel({
   setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
 }) {
   return (
-    <section className="panel filter-panel">
-      <label>
+    <Card className="filter-panel">
+      <Label>
         Bulan
-        <input type="month" value={filters.month} onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))} />
-      </label>
-      <label>
+        <Input type="month" value={filters.month} onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))} />
+      </Label>
+      <Label>
         Akun
-        <select value={filters.accountId} onChange={(event) => setFilters((current) => ({ ...current, accountId: event.target.value }))}>
-          <option value="">Semua Akun</option>
-          {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-        </select>
-      </label>
-      <label>
+        <Select value={filters.accountId || 'all-accounts'} onValueChange={(value) => setFilters((current) => ({ ...current, accountId: value === 'all-accounts' ? '' : value }))}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all-accounts">Semua Akun</SelectItem>
+            {accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </Label>
+      <Label>
         Kategori
-        <select value={filters.categoryId} onChange={(event) => setFilters((current) => ({ ...current, categoryId: event.target.value }))}>
-          <option value="">Semua Kategori</option>
-          {categories.map((category) => <option key={category.id} value={category.id}>{category.icon} {category.name}</option>)}
-        </select>
-      </label>
-      <label>
+        <Select value={filters.categoryId || 'all-categories'} onValueChange={(value) => setFilters((current) => ({ ...current, categoryId: value === 'all-categories' ? '' : value }))}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all-categories">Semua Kategori</SelectItem>
+            {categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.icon} {category.name}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </Label>
+      <Label>
         Tipe
-        <select value={filters.type} onChange={(event) => setFilters((current) => ({ ...current, type: event.target.value as ReportFilters['type'] }))}>
-          <option value="all">Semua Tipe</option>
-          <option value="income">Income</option>
-          <option value="expense">Expense</option>
-          <option value="transfer">Transfer</option>
-        </select>
-      </label>
-    </section>
+        <Select value={filters.type} onValueChange={(value) => setFilters((current) => ({ ...current, type: value as ReportFilters['type'] }))}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Tipe</SelectItem>
+            <SelectItem value="income">Income</SelectItem>
+            <SelectItem value="expense">Expense</SelectItem>
+            <SelectItem value="transfer">Transfer</SelectItem>
+          </SelectContent>
+        </Select>
+      </Label>
+    </Card>
   )
 }
 
@@ -563,60 +586,72 @@ function TransactionFormPanel({
 
   return (
     <form className="panel transaction-form" onSubmit={saveTransaction}>
-      <div className="panel-heading">
-        <h2>Tambah Transaksi</h2>
-        <p>Income, expense, atau transfer antar akun.</p>
-      </div>
+      <CardHeader className="panel-heading">
+        <CardTitle>Tambah Transaksi</CardTitle>
+        <CardDescription>Income, expense, atau transfer antar akun.</CardDescription>
+      </CardHeader>
       <div className="segmented-control three" role="tablist" aria-label="Transaction type">
-        <button type="button" className={form.type === 'expense' ? 'active expense' : ''} onClick={() => updateTransactionType('expense')}>Expense</button>
-        <button type="button" className={form.type === 'income' ? 'active income' : ''} onClick={() => updateTransactionType('income')}>Income</button>
-        <button type="button" className={form.type === 'transfer' ? 'active transfer' : ''} onClick={() => updateTransactionType('transfer')}>Transfer</button>
+        <Button variant="ghost" type="button" className={form.type === 'expense' ? 'active expense' : ''} onClick={() => updateTransactionType('expense')}>Expense</Button>
+        <Button variant="ghost" type="button" className={form.type === 'income' ? 'active income' : ''} onClick={() => updateTransactionType('income')}>Income</Button>
+        <Button variant="ghost" type="button" className={form.type === 'transfer' ? 'active transfer' : ''} onClick={() => updateTransactionType('transfer')}>Transfer</Button>
       </div>
-      <label>
+      <Label>
         Amount
-        <input className={`amount-input ${form.type}`} inputMode="decimal" min="0" placeholder="50000" required type="number" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
-      </label>
-      <label>
+        <Input className={`amount-input ${form.type}`} inputMode="decimal" min="0" placeholder="50000" required type="number" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
+      </Label>
+      <Label>
         Date
-        <input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
-      </label>
+        <Input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
+      </Label>
       {form.type === 'transfer' ? (
         <div className="form-row">
-          <label>
+          <Label>
             From
-            <select required value={form.fromAccountId} onChange={(event) => updateFromAccount(event.target.value)}>
-              {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-            </select>
-          </label>
-          <label>
+            <Select required value={form.fromAccountId} onValueChange={updateFromAccount}>
+              <SelectTrigger><SelectValue placeholder="Pilih akun" /></SelectTrigger>
+              <SelectContent>
+                {accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Label>
+          <Label>
             To
-            <select required value={form.toAccountId} onChange={(event) => setForm({ ...form, toAccountId: event.target.value })}>
-              {toAccountOptions.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-            </select>
+            <Select required value={form.toAccountId} onValueChange={(value) => setForm({ ...form, toAccountId: value })}>
+              <SelectTrigger><SelectValue placeholder="Pilih akun" /></SelectTrigger>
+              <SelectContent>
+                {toAccountOptions.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
             {toAccountOptions.length === 0 && <span className="helper-text">Buat akun kedua untuk transfer antar akun.</span>}
-          </label>
+          </Label>
         </div>
       ) : (
         <div className="form-row">
-          <label>
+          <Label>
             Account
-            <select required value={form.accountId} onChange={(event) => setForm({ ...form, accountId: event.target.value })}>
-              {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-            </select>
-          </label>
-          <label>
+            <Select required value={form.accountId} onValueChange={(value) => setForm({ ...form, accountId: value })}>
+              <SelectTrigger><SelectValue placeholder="Pilih akun" /></SelectTrigger>
+              <SelectContent>
+                {accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Label>
+          <Label>
             Category
-            <select required value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })}>
-              {categories.map((category) => <option key={category.id} value={category.id}>{category.icon} {category.name}</option>)}
-            </select>
-          </label>
+            <Select required value={form.categoryId} onValueChange={(value) => setForm({ ...form, categoryId: value })}>
+              <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+              <SelectContent>
+                {categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.icon} {category.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Label>
         </div>
       )}
-      <label>
+      <Label>
         Note
-        <input placeholder="Contoh: Makan siang / pindah saldo" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} />
-      </label>
-      <button className="primary-button" type="submit">Simpan</button>
+        <Input placeholder="Contoh: Makan siang / pindah saldo" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} />
+      </Label>
+      <Button variant={form.type === 'transfer' ? 'transfer' : form.type} type="submit">Simpan</Button>
     </form>
   )
 }
@@ -631,12 +666,12 @@ function TopCategoriesPanel({
   topCategories: Array<{ category: Category; amount: number }>
 }) {
   return (
-    <section className="panel">
-      <div className="panel-heading">
-        <h2>Top Categories</h2>
-        <p>Expense sesuai filter report.</p>
-      </div>
-      <div className="category-list">
+    <Card>
+      <CardHeader className="panel-heading">
+        <CardTitle>Top Categories</CardTitle>
+        <CardDescription>Expense sesuai filter report.</CardDescription>
+      </CardHeader>
+      <CardContent className="category-list">
         {topCategories.length === 0 ? <p className="empty-state">Belum ada expense di filter ini.</p> : topCategories.map(({ category, amount }) => (
           <div className="category-row" key={category.id}>
             <span className="category-icon" style={{ background: category.color }}>{category.icon}</span>
@@ -647,8 +682,8 @@ function TopCategoriesPanel({
             <span>{formatMoney(amount)}</span>
           </div>
         ))}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -668,17 +703,17 @@ function TransactionsPanel({
   transactions: MoneyTransaction[]
 }) {
   return (
-    <section className="panel transaction-list-panel">
-      <div className="panel-heading">
-        <h2>{title}</h2>
-        <p>{transactions.length} transaksi.</p>
-      </div>
-      <div className="transaction-list">
+    <Card className="transaction-list-panel">
+      <CardHeader className="panel-heading">
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{transactions.length} transaksi.</CardDescription>
+      </CardHeader>
+      <CardContent className="transaction-list">
         {transactions.length === 0 ? <p className="empty-state">Belum ada transaksi pada filter ini.</p> : transactions.map((transaction) => (
           <TransactionItem accounts={accounts} categories={categories} formatMoney={formatMoney} key={transaction.id} onDelete={onDelete} transaction={transaction} />
         ))}
-      </div>
-    </section>
+      </CardContent>
+    </Card>
   )
 }
 
@@ -713,22 +748,18 @@ function TransactionItem({
         <small>{transaction.date} · {detail}{transaction.note ? ` · ${transaction.note}` : ''}</small>
       </div>
       <strong className={transaction.type}>{formatTransactionAmount(transaction, formatMoney)}</strong>
-      {onDelete && <button aria-label="Delete transaction" className="ghost-button danger" type="button" onClick={() => onDelete(transaction.id)}>Delete</button>}
+      {onDelete && <Button aria-label="Delete transaction" size="sm" variant="destructive" type="button" onClick={() => onDelete(transaction.id)}>Delete</Button>}
     </article>
   )
 }
 
 function Metric({ formatMoney, label, value, tone }: { formatMoney: FormatMoney; label: string; value: number; tone: CashflowType }) {
   return (
-    <div className={`metric-card ${tone}`}>
+    <Card className={`metric-card ${tone}`}>
       <span>{label}</span>
       <strong>{formatMoney(value)}</strong>
-    </div>
+    </Card>
   )
-}
-
-function TabButton({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-  return <button className={active ? 'active' : ''} type="button" onClick={onClick}>{label}</button>
 }
 
 function formatTransactionAmount(transaction: MoneyTransaction, formatMoney: FormatMoney) {

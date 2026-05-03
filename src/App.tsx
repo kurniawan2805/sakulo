@@ -207,6 +207,7 @@ function App() {
       })
     }
 
+    navigator.vibrate?.(10)
     setTransactionForm((current) => ({ ...current, amount: '', note: '' }))
     setQuickAddOpen(false)
     setQuickAddStep('type')

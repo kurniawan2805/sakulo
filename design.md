@@ -330,10 +330,10 @@ Visual direction:
 
 - Mobile-first
 - Warm Professional light mode: `#FDFCF7` background, `#FFFFFF` surfaces, `#1A1C1E` hero/text primary
-- Deep Charcoal dark mode: `#111318` background, `#1A1C1E` surfaces, `#D1E4FF` text primary
+- Expensive dark mode: `#0b0e14` deep neutral background, `#151921` surfaces, `#e7edf8` text primary
 - Dark high-contrast hero
 - Rounded cards
-- Strong financial colors: green for income, red for expense, blue for transfer
+- Strong financial colors: emerald `#34d399` for income, rose `#f87171` for expense, blue for transfer
 - Simple tab navigation
 
 Interaction priorities:
@@ -349,6 +349,8 @@ Technical UI rules:
 - All money inputs must use `<input type="number" inputmode="decimal" />` to trigger numeric keypads on mobile.
 - Amount input should provide semantic focus feedback: red for expense, green for income, blue for transfer.
 - Do not rely on color alone: income uses `+`, expense uses `-`, and transfer uses `↔`.
+- Save transaction triggers `navigator.vibrate(10)` where supported for subtle haptic feedback.
+- Transaction entry uses a bottom drawer pattern so controls stay reachable on mobile.
 
 Styling direction:
 

@@ -8,15 +8,15 @@
 .hero-card,
 .panel,
 .metric-card {
-  border: 1px solid var(--border);
   box-shadow: var(--shadow);
 }
 
 .hero-card {
   align-items: stretch;
   background:
-    radial-gradient(circle at top left, color-mix(in srgb, var(--color-income) 28%, transparent), transparent 32%),
-    linear-gradient(135deg, #1A1C1E, #23252B 56%, #0B3D5C);
+    radial-gradient(circle at 18% 18%, color-mix(in srgb, var(--color-income) 30%, transparent), transparent 30%),
+    radial-gradient(circle at 88% 84%, color-mix(in srgb, var(--color-transfer) 30%, transparent), transparent 34%),
+    linear-gradient(145deg, #151921, #111620 54%, #0b2536);
   border-radius: 28px;
   color: rgba(255, 255, 255, 0.78);
   display: grid;
@@ -48,19 +48,23 @@
 
 .balance-card {
   align-self: end;
-  background: rgba(255, 255, 255, 0.11);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background:
+    radial-gradient(circle at 8% 8%, rgba(255, 255, 255, 0.16), transparent 42%),
+    rgba(255, 255, 255, 0.08);
   border-radius: 24px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   padding: 24px;
 }
 
 .balance-card strong {
   color: #fff;
-  font-size: clamp(1.6rem, 4vw, 2.7rem);
+  font-family: 'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+  font-size: clamp(2.35rem, 8vw, 4.4rem);
+  font-weight: 800;
   letter-spacing: -0.05em;
+  line-height: 1.02;
 }
 
 .metrics-grid,
@@ -148,7 +152,7 @@
 }
 
 .overview-grid {
-  background: var(--soft-bg);
+  background: color-mix(in srgb, var(--soft-bg) 76%, transparent);
   border-radius: 22px;
   display: grid;
   gap: 1px;
@@ -157,7 +161,7 @@
 }
 
 .overview-grid > div {
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  background: transparent;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -196,7 +200,6 @@
 
 .tab-nav {
   background: var(--surface);
-  border: 1px solid var(--border);
   border-radius: 999px;
   box-shadow: none;
   display: grid;
@@ -245,11 +248,11 @@ small {
 }
 
 .metric-card.income {
-  border-color: color-mix(in srgb, var(--color-income) 32%, var(--border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-income) 28%, transparent), var(--shadow);
 }
 
 .metric-card.expense {
-  border-color: color-mix(in srgb, var(--color-expense) 32%, var(--border));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-expense) 28%, transparent), var(--shadow);
 }
 
 .panel-heading {
@@ -413,7 +416,7 @@ button:focus-visible {
 .account-item {
   align-items: center;
   background: var(--soft-bg);
-  border-radius: 20px;
+  border-radius: 22px;
   display: grid;
   gap: 12px;
   padding: 12px;
@@ -472,6 +475,8 @@ button:focus-visible {
 .transaction-main strong {
   color: var(--text-h);
   display: block;
+  font-size: 1.05rem;
+  font-weight: 800;
 }
 
 .category-row small,
@@ -582,7 +587,8 @@ button:focus-visible {
 
 .dialog-backdrop {
   align-items: flex-end;
-  background: rgba(0, 0, 0, 0.42);
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(10px);
   display: flex;
   inset: 0;
   justify-content: center;
@@ -592,10 +598,25 @@ button:focus-visible {
 }
 
 .quick-dialog {
+  border-radius: 30px 30px 22px 22px;
   max-height: min(88vh, 760px);
   max-width: 520px;
   overflow: auto;
+  padding-top: 28px;
+  position: relative;
   width: 100%;
+}
+
+.quick-dialog::before {
+  background: color-mix(in srgb, var(--text-secondary) 46%, transparent);
+  border-radius: 999px;
+  content: '';
+  height: 4px;
+  left: 50%;
+  position: absolute;
+  top: 12px;
+  transform: translateX(-50%);
+  width: 42px;
 }
 
 .quick-dialog-header {

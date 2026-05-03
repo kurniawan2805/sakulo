@@ -21,6 +21,13 @@ export function transactionTouchesAccount(transaction: MoneyTransaction, account
   return transaction.accountId === accountId
 }
 
+/**
+ * Account balance is computed from the immutable transaction ledger:
+ *
+ * $$
+ * \text{Balance}_{\text{final}} = \text{Balance}_{\text{init}} + \sum \text{Income} - \sum \text{Expense} + (\sum \text{Transfer}_{\text{in}} - \sum \text{Transfer}_{\text{out}})
+ * $$
+ */
 export function calculateAccountBalance(account: Account, transactions: MoneyTransaction[]) {
   return transactions.reduce((balance, transaction) => {
     if (transaction.type === 'income' && transaction.accountId === account.id) {

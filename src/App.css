@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
-  padding: 24px;
+  padding: 18px 18px 96px;
 }
 
 .hero-card,
@@ -17,18 +17,18 @@
   background:
     radial-gradient(circle at top left, color-mix(in srgb, var(--color-income) 28%, transparent), transparent 32%),
     linear-gradient(135deg, #1A1C1E, #23252B 56%, #0B3D5C);
-  border-radius: 32px;
+  border-radius: 28px;
   color: rgba(255, 255, 255, 0.78);
   display: grid;
   gap: 24px;
   grid-template-columns: minmax(0, 1fr) 320px;
   overflow: hidden;
-  padding: 32px;
+  padding: 26px;
 }
 
 .hero-card h1 {
   color: #fff;
-  font-size: clamp(2.5rem, 7vw, 5rem);
+  font-size: clamp(2.25rem, 6vw, 4.5rem);
   letter-spacing: -0.08em;
   line-height: 0.88;
   margin: 10px 0 16px;
@@ -91,7 +91,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 999px;
-  box-shadow: var(--shadow-soft);
+  box-shadow: none;
   display: grid;
   gap: 6px;
   grid-template-columns: repeat(3, 1fr);
@@ -110,11 +110,6 @@
   font: inherit;
   font-weight: 850;
   padding: 12px 16px;
-}
-
-.tab-nav button.active {
-  background: var(--text-primary);
-  color: #fff;
 }
 
 .metric-card,
@@ -170,6 +165,12 @@ small {
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.quick-dialog .transaction-form {
+  border: 0;
+  box-shadow: none;
+  padding: 0;
 }
 
 .segmented-control {
@@ -415,9 +416,107 @@ button:focus-visible {
   padding: 18px;
 }
 
+.fab {
+  border-radius: 999px;
+  bottom: calc(22px + env(safe-area-inset-bottom));
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--color-income) 30%, transparent);
+  height: 60px;
+  position: fixed;
+  right: 22px;
+  width: 60px;
+  z-index: 45;
+}
+
+.fab svg {
+  height: 28px;
+  width: 28px;
+}
+
+.dialog-backdrop {
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 16px;
+  position: fixed;
+  z-index: 50;
+}
+
+.quick-dialog {
+  max-height: min(88vh, 760px);
+  max-width: 520px;
+  overflow: auto;
+  width: 100%;
+}
+
+.quick-dialog-header {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.quick-type-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.quick-type-button {
+  align-items: center;
+  background: var(--soft-bg);
+  display: grid;
+  gap: 4px;
+  grid-template-columns: auto 1fr;
+  height: auto;
+  justify-content: start;
+  min-height: 76px;
+  padding: 16px;
+  text-align: left;
+  white-space: normal;
+}
+
+.quick-type-button span {
+  align-items: center;
+  border-radius: 16px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 1.35rem;
+  grid-row: span 2;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.quick-type-button strong {
+  color: var(--text-h);
+  display: block;
+}
+
+.quick-type-button small {
+  color: var(--muted);
+}
+
+.quick-type-button.expense span {
+  background: var(--color-expense);
+}
+
+.quick-type-button.income span {
+  background: var(--color-income);
+}
+
+.quick-type-button.transfer span {
+  background: var(--color-transfer);
+}
+
+.quick-back {
+  margin-bottom: 14px;
+}
+
 @media (max-width: 840px) {
   .app-shell {
-    padding: 12px;
+    padding: 12px 12px 96px;
   }
 
   .hero-card,
@@ -430,7 +529,7 @@ button:focus-visible {
 
   .hero-card {
     border-radius: 24px;
-    padding: 24px;
+    padding: 22px;
   }
 
   .metrics-grid {
@@ -448,9 +547,12 @@ button:focus-visible {
     justify-self: start;
   }
 
-  .tab-nav {
-    bottom: 12px;
-    top: auto;
+  .dialog-backdrop {
+    padding: 10px;
+  }
+
+  .quick-dialog {
+    border-radius: 26px 26px 20px 20px;
   }
 }
 

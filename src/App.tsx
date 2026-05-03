@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { Plus, X } from 'lucide-react'
 import './App.css'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,6 +28,7 @@ import {
 } from './money'
 
 type Tab = 'dashboard' | 'log' | 'accounts'
+type QuickAddStep = 'type' | 'form'
 
 type TransactionForm = {
   type: TransactionType
@@ -68,6 +70,8 @@ const emptyAccountForm: AccountForm = {
 
 function App() {
   const [tab, setTab] = useState<Tab>('dashboard')
+  const [quickAddOpen, setQuickAddOpen] = useState(false)
+  const [quickAddStep, setQuickAddStep] = useState<QuickAddStep>('type')
   const [snapshot, setSnapshot] = useState<Snapshot>({ accounts: [], categories: [], transactions: [] })
   const [primaryCurrency, setPrimaryCurrency] = useState<PrimaryCurrency>('IDR')
   const [filters, setFilters] = useState<ReportFilters>({
@@ -204,6 +208,8 @@ function App() {
     }
 
     setTransactionForm((current) => ({ ...current, amount: '', note: '' }))
+    setQuickAddOpen(false)
+    setQuickAddStep('type')
   }
 
   async function deleteTransaction(id: string) {
@@ -256,6 +262,16 @@ function App() {
     if (filters.accountId === account.id) setFilters((current) => ({ ...current, accountId: '' }))
   }
 
+  function openQuickAdd(type?: TransactionType) {
+    setQuickAddOpen(true)
+    if (type) {
+      updateTransactionType(type)
+      setQuickAddStep('form')
+    } else {
+      setQuickAddStep('type')
+    }
+  }
+
   return (
     <main className="app-shell">
       <section className="hero-card">
@@ -294,16 +310,11 @@ function App() {
           <LogTab
             accounts={activeAccounts}
             categories={snapshot.categories}
-            cashflowCategories={cashflowCategories}
             deleteTransaction={deleteTransaction}
             filters={filters}
             formatMoney={formatMoney}
-            form={transactionForm}
-            saveTransaction={saveTransaction}
             setFilters={setFilters}
-            setForm={setTransactionForm}
             transactions={filteredTransactions}
-            updateTransactionType={updateTransactionType}
           />
         </TabsContent>
 
@@ -323,6 +334,28 @@ function App() {
           />
         </TabsContent>
       </Tabs>
+
+      <Button aria-label="Tambah transaksi" className="fab" size="icon" type="button" variant="income" onClick={() => openQuickAdd()}>
+        <Plus aria-hidden="true" />
+      </Button>
+
+      {quickAddOpen && (
+        <QuickAddDialog
+          accounts={activeAccounts}
+          categories={cashflowCategories}
+          form={transactionForm}
+          onClose={() => {
+            setQuickAddOpen(false)
+            setQuickAddStep('type')
+          }}
+          onPickType={(type) => openQuickAdd(type)}
+          onBack={() => setQuickAddStep('type')}
+          saveTransaction={saveTransaction}
+          setForm={setTransactionForm}
+          step={quickAddStep}
+          updateTransactionType={updateTransactionType}
+        />
+      )}
     </main>
   )
 }
@@ -365,45 +398,97 @@ function DashboardTab({
 function LogTab({
   accounts,
   categories,
-  cashflowCategories,
   deleteTransaction,
   filters,
   formatMoney,
-  form,
-  saveTransaction,
   setFilters,
-  setForm,
   transactions,
-  updateTransactionType,
 }: {
   accounts: Account[]
   categories: Category[]
-  cashflowCategories: Category[]
   deleteTransaction: (id: string) => void
   filters: ReportFilters
   formatMoney: FormatMoney
-  form: TransactionForm
-  saveTransaction: (event: FormEvent<HTMLFormElement>) => void
   setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
-  setForm: React.Dispatch<React.SetStateAction<TransactionForm>>
   transactions: MoneyTransaction[]
-  updateTransactionType: (type: TransactionType) => void
 }) {
   return (
     <>
       <ReportFiltersPanel accounts={accounts} categories={categories} filters={filters} setFilters={setFilters} />
-      <section className="content-grid">
-        <TransactionFormPanel
-          accounts={accounts}
-          categories={cashflowCategories}
-          form={form}
-          saveTransaction={saveTransaction}
-          setForm={setForm}
-          updateTransactionType={updateTransactionType}
-        />
-        <TransactionsPanel accounts={accounts} categories={categories} formatMoney={formatMoney} onDelete={deleteTransaction} title="Log Bulan Berjalan" transactions={transactions} />
-      </section>
+      <TransactionsPanel accounts={accounts} categories={categories} formatMoney={formatMoney} onDelete={deleteTransaction} title="Log Bulan Berjalan" transactions={transactions} />
     </>
+  )
+}
+
+function QuickAddDialog({
+  accounts,
+  categories,
+  form,
+  onBack,
+  onClose,
+  onPickType,
+  saveTransaction,
+  setForm,
+  step,
+  updateTransactionType,
+}: {
+  accounts: Account[]
+  categories: Category[]
+  form: TransactionForm
+  onBack: () => void
+  onClose: () => void
+  onPickType: (type: TransactionType) => void
+  saveTransaction: (event: FormEvent<HTMLFormElement>) => void
+  setForm: React.Dispatch<React.SetStateAction<TransactionForm>>
+  step: QuickAddStep
+  updateTransactionType: (type: TransactionType) => void
+}) {
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <Card className="quick-dialog" role="dialog" aria-modal="true" aria-labelledby="quick-add-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="quick-dialog-header">
+          <div>
+            <CardTitle id="quick-add-title">Quick Add</CardTitle>
+            <CardDescription>{step === 'type' ? 'Pilih jenis transaksi.' : 'Isi detail transaksi.'}</CardDescription>
+          </div>
+          <Button aria-label="Tutup" size="icon" variant="ghost" type="button" onClick={onClose}>
+            <X aria-hidden="true" />
+          </Button>
+        </div>
+
+        {step === 'type' ? (
+          <div className="quick-type-grid">
+            <Button className="quick-type-button expense" variant="ghost" type="button" onClick={() => onPickType('expense')}>
+              <span>↓</span>
+              <strong>Expense</strong>
+              <small>Catat pengeluaran</small>
+            </Button>
+            <Button className="quick-type-button income" variant="ghost" type="button" onClick={() => onPickType('income')}>
+              <span>↑</span>
+              <strong>Income</strong>
+              <small>Catat pemasukan</small>
+            </Button>
+            <Button className="quick-type-button transfer" variant="ghost" type="button" onClick={() => onPickType('transfer')}>
+              <span>↔</span>
+              <strong>Transfer</strong>
+              <small>Pindah antar akun</small>
+            </Button>
+          </div>
+        ) : (
+          <>
+            <Button className="quick-back" size="sm" variant="ghost" type="button" onClick={onBack}>← Pilih tipe lain</Button>
+            <TransactionFormPanel
+              accounts={accounts}
+              categories={categories}
+              form={form}
+              saveTransaction={saveTransaction}
+              setForm={setForm}
+              updateTransactionType={updateTransactionType}
+            />
+          </>
+        )}
+      </Card>
+    </div>
   )
 }
 

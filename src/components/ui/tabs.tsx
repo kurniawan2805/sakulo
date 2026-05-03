@@ -18,7 +18,7 @@ function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimi
 function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (
     <TabsPrimitive.Trigger
-      className={cn('rounded-full px-4 py-3 text-sm font-extrabold text-[var(--text-secondary)] transition-colors data-[state=active]:bg-[var(--text-primary)] data-[state=active]:text-white focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--text-primary)_20%,transparent)]', className)}
+      className={cn('rounded-full border border-transparent px-4 py-3 text-sm font-extrabold text-[var(--text-secondary)] transition-colors data-[state=active]:border-[color-mix(in_srgb,var(--text-primary)_24%,transparent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--text-primary)] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--text-primary)_20%,transparent)]', className)}
       {...props}
     />
   )

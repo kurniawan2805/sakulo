@@ -100,12 +100,23 @@ Log adalah layar operasional untuk input dan review transaksi.
 
 Fitur:
 
-- Tambah income
-- Tambah expense
-- Tambah transfer antar akun
 - Filter log berdasarkan bulan, akun, kategori, dan tipe
 - Delete transaksi
 - List transaksi urut terbaru
+- Empty state should direct users to the floating `+` action.
+
+### Quick Add
+
+Quick Add adalah entry point utama untuk transaksi harian.
+
+Behavior:
+
+- Floating `+` is always visible on the bottom-right safe area.
+- Tapping `+` opens a lightweight action dialog.
+- First step asks the user to pick `Expense`, `Income`, or `Transfer`.
+- Second step shows the transaction form for the selected type.
+- Submitting a valid transaction closes the dialog automatically.
+- The transaction form should not be permanently visible in `Log`; this keeps the tracker list-first and closer to Ivy-style quick entry.
 
 Validasi transaksi:
 
@@ -327,6 +338,7 @@ Visual direction:
 Interaction priorities:
 
 - Adding a transaction should be fast.
+- The primary add affordance is the floating `+`, not a static form.
 - Filters should be visible and predictable.
 - Account balances should be understandable without manual recalculation.
 - Transfer should feel separate from income/expense.
@@ -341,6 +353,7 @@ Styling direction:
 
 - Current MVP uses Tailwind CSS and shadcn-style local components.
 - CSS variables define theme color tokens and feed the component layer.
+- Active tab state should remain subtle: text/border emphasis instead of a heavy filled shade.
 - Date picker can be introduced after the base component system stays stable.
 
 ## Current Limitations

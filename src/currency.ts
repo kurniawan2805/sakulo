@@ -11,6 +11,9 @@ export function getCurrencyMeta(currency: PrimaryCurrency) {
 }
 
 export function getMinorUnitDigits(currency: PrimaryCurrency) {
+  if (currency === 'IDR') return 0
+  if (currency === 'SAR' || currency === 'USD') return 2
+
   return new Intl.NumberFormat(getCurrencyMeta(currency).locale, {
     style: 'currency',
     currency,

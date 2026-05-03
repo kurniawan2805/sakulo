@@ -70,8 +70,23 @@ h2 {
   min-height: 100svh;
 }
 
+:root[data-theme="dark"] {
+  --bg-color: #0b0e14;
+  --surface-color: #151921;
+  --soft-bg-color: #1b202a;
+  --field-bg-color: #0f131b;
+  --text-primary: #e7edf8;
+  --text-secondary: #9aa4b2;
+  --color-income: #34d399;
+  --color-expense: #F87171;
+  --color-transfer: #60a5fa;
+  --border-color: rgba(148, 163, 184, 0.08);
+  --card-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  --shadow-soft: 0 10px 26px rgba(0, 0, 0, 0.18);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg-color: #0b0e14;
     --surface-color: #151921;
     --soft-bg-color: #1b202a;

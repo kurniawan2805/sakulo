@@ -25,6 +25,23 @@
   letter-spacing: -0.06em;
 }
 
+.header-actions {
+  align-items: center;
+  display: flex;
+  gap: 4px;
+}
+
+.header-actions svg {
+  height: 18px;
+  width: 18px;
+}
+
+.language-toggle {
+  border-radius: 999px;
+  gap: 6px;
+  padding-inline: 10px;
+}
+
 .hero-card,
 .panel,
 .metric-card {
@@ -40,9 +57,9 @@
   border-radius: 32px;
   color: rgba(255, 255, 255, 0.78);
   display: flex;
-  min-height: 220px;
+  min-height: 238px;
   overflow: hidden;
-  padding: 28px;
+  padding: 36px 30px;
 }
 
 .hero-card h1 {
@@ -157,7 +174,7 @@
 .overview-heading {
   align-items: baseline;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   margin-bottom: 14px;
 }
 
@@ -181,13 +198,10 @@
 }
 
 .overview-grid > div {
-  background: color-mix(in srgb, var(--soft-bg) 58%, transparent);
-  border-radius: 22px;
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-  padding: 14px;
 }
 
 .overview-grid strong {
@@ -274,11 +288,18 @@
 }
 
 .bottom-fab {
+  background: #10b981;
   border-radius: 999px;
-  box-shadow: 0 18px 42px color-mix(in srgb, var(--color-income) 30%, transparent);
+  box-shadow: 0 14px 30px color-mix(in srgb, #10b981 22%, transparent);
+  color: #fff;
   height: 58px;
   margin: 0 8px;
   width: 58px;
+}
+
+.bottom-fab:hover {
+  background: #059669;
+  color: #fff;
 }
 
 .bottom-fab svg {
@@ -780,8 +801,8 @@ button:focus-visible {
 
   .hero-card {
     border-radius: 24px;
-    min-height: 190px;
-    padding: 24px;
+    min-height: 210px;
+    padding: 30px 26px;
   }
 
   .metrics-grid {

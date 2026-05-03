@@ -229,11 +229,17 @@ Rules:
 
 ```ts
 type AppSetting = {
-  key: 'primaryCurrency'
-  value: PrimaryCurrency
+  key: 'primaryCurrency' | 'theme' | 'language'
+  value: PrimaryCurrency | 'light' | 'dark' | 'id' | 'en'
   updatedAt: string
 }
 ```
+
+Preference behavior:
+
+- Theme is persisted locally as `light` or `dark` and applied through `:root[data-theme]` CSS variables.
+- Language is persisted locally as `id` or `en` and switches app-owned labels only.
+- User-authored data such as account names, category names, and transaction notes is never translated automatically.
 
 Amount storage:
 
@@ -312,6 +318,8 @@ Default seed:
 
 - Account: Cash
 - Setting: primaryCurrency = IDR
+- Setting: theme = dark
+- Setting: language = id
 - Expense categories: Food, Transport, Shopping, Bills, Health, Other
 - Income categories: Salary, Gift, Other
 
@@ -353,6 +361,14 @@ Hero balance rules:
 - Amount uses large monospaced typography for precision.
 - Currency symbol is visually smaller than the amount.
 - IDR display should not show decimal points.
+- Hero should keep generous vertical breathing room on mobile and desktop.
+
+Dashboard report rules:
+
+- Report title should be the human-readable month label, not a decorative uppercase kicker.
+- Monthly overview must not duplicate net cashflow in the heading and net row.
+- Income and expense values should sit directly on the parent monthly card, without inner boxes.
+- The bottom `+` FAB uses muted emerald with a soft shadow, not a neon glow.
 
 Interaction priorities:
 

@@ -3,6 +3,8 @@ import Dexie, { type Table } from 'dexie'
 export type CashflowType = 'income' | 'expense'
 export type TransactionType = CashflowType | 'transfer'
 export type PrimaryCurrency = 'IDR' | 'SAR' | 'USD'
+export type ThemePreference = 'light' | 'dark'
+export type LanguagePreference = 'id' | 'en'
 
 export type Account = {
   id: string
@@ -48,11 +50,10 @@ export type TransferTransaction = BaseTransaction & {
 
 export type MoneyTransaction = IncomeExpenseTransaction | TransferTransaction
 
-export type AppSetting = {
-  key: 'primaryCurrency'
-  value: PrimaryCurrency
-  updatedAt: string
-}
+export type AppSetting =
+  | { key: 'primaryCurrency'; value: PrimaryCurrency; updatedAt: string }
+  | { key: 'theme'; value: ThemePreference; updatedAt: string }
+  | { key: 'language'; value: LanguagePreference; updatedAt: string }
 
 class MoneyManagerDb extends Dexie {
   accounts!: Table<Account, string>
@@ -103,10 +104,12 @@ const categorySeed: Array<Omit<Category, 'createdAt' | 'updatedAt'>> = [
 ]
 
 export async function ensureSeedData() {
-  const [accountCount, categoryCount, primaryCurrency] = await Promise.all([
+  const [accountCount, categoryCount, primaryCurrency, theme, language] = await Promise.all([
     db.accounts.count(),
     db.categories.count(),
     db.settings.get('primaryCurrency'),
+    db.settings.get('theme'),
+    db.settings.get('language'),
   ])
 
   const timestamp = now()
@@ -138,6 +141,22 @@ export async function ensureSeedData() {
     await db.settings.put({
       key: 'primaryCurrency',
       value: 'IDR',
+      updatedAt: timestamp,
+    })
+  }
+
+  if (!theme) {
+    await db.settings.put({
+      key: 'theme',
+      value: 'dark',
+      updatedAt: timestamp,
+    })
+  }
+
+  if (!language) {
+    await db.settings.put({
+      key: 'language',
+      value: 'id',
       updatedAt: timestamp,
     })
   }

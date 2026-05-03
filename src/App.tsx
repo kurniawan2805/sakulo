@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Bell, LayoutDashboard, List, Plus, Settings, X } from 'lucide-react'
+import { Bell, Languages, LayoutDashboard, List, Moon, Plus, Settings, Sun, X } from 'lucide-react'
 import './App.css'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -14,6 +14,7 @@ import {
   type Category,
   type MoneyTransaction,
   type PrimaryCurrency,
+  type ThemePreference,
   type TransactionType,
 } from './db'
 import { currencyOptions, formatMinorMoney, minorToMajorInput, parseMajorToMinor } from './currency'
@@ -24,6 +25,7 @@ import {
   getTopCategories,
   type ReportFilters,
 } from './money'
+import { translations, type Language, type Translation } from './i18n'
 
 type Tab = 'dashboard' | 'log' | 'accounts'
 type QuickAddStep = 'type' | 'form'
@@ -55,6 +57,7 @@ type Snapshot = {
 }
 
 type FormatMoney = (value: number) => string
+type AppText = Translation
 
 const today = () => new Date().toISOString().slice(0, 10)
 const thisMonth = () => today().slice(0, 7)
@@ -74,6 +77,8 @@ function App() {
   const [filterDrawer, setFilterDrawer] = useState<FilterDrawer>(null)
   const [snapshot, setSnapshot] = useState<Snapshot>({ accounts: [], categories: [], transactions: [] })
   const [primaryCurrency, setPrimaryCurrency] = useState<PrimaryCurrency>('IDR')
+  const [theme, setTheme] = useState<ThemePreference>('dark')
+  const [language, setLanguage] = useState<Language>('id')
   const [filters, setFilters] = useState<ReportFilters>({
     month: thisMonth(),
     accountId: '',
@@ -93,6 +98,10 @@ function App() {
   const [accountForm, setAccountForm] = useState<AccountForm>(emptyAccountForm)
 
   useEffect(() => {
+    document.documentElement.dataset.theme = theme
+  }, [theme])
+
+  useEffect(() => {
     let cancelled = false
 
     async function load() {
@@ -101,11 +110,17 @@ function App() {
         db.categories.toArray(),
         db.transactions.orderBy('date').reverse().toArray(),
       ])
-      const setting = await db.settings.get('primaryCurrency')
+      const [currencySetting, themeSetting, languageSetting] = await Promise.all([
+        db.settings.get('primaryCurrency'),
+        db.settings.get('theme'),
+        db.settings.get('language'),
+      ])
       if (cancelled) return
 
       const activeAccounts = accounts.filter((account) => !account.archived)
-      if (setting) setPrimaryCurrency(setting.value)
+      if (currencySetting?.key === 'primaryCurrency') setPrimaryCurrency(currencySetting.value)
+      if (themeSetting?.key === 'theme') setTheme(themeSetting.value)
+      if (languageSetting?.key === 'language') setLanguage(languageSetting.value)
       setSnapshot({ accounts, categories, transactions })
       setTransactionForm((current) => ({
         ...current,
@@ -165,6 +180,7 @@ function App() {
   const formatMoney = (value: number) => formatMinorMoney(value, primaryCurrency)
   const heroMoney = getMoneyParts(formatMoney(heroBalance))
   const isCurrencyLocked = snapshot.transactions.length > 0
+  const t = translations[language]
 
   function updateTransactionType(type: TransactionType) {
     const nextCategory = type === 'transfer'
@@ -259,6 +275,24 @@ function App() {
     })
   }
 
+  async function updateTheme(value: ThemePreference) {
+    setTheme(value)
+    await db.settings.put({
+      key: 'theme',
+      value,
+      updatedAt: getTimestamp(),
+    })
+  }
+
+  async function updateLanguage(value: Language) {
+    setLanguage(value)
+    await db.settings.put({
+      key: 'language',
+      value,
+      updatedAt: getTimestamp(),
+    })
+  }
+
   async function archiveAccount(account: Account) {
     await db.accounts.update(account.id, { archived: true, updatedAt: getTimestamp() })
     if (filters.accountId === account.id) setFilters((current) => ({ ...current, accountId: '' }))
@@ -278,19 +312,28 @@ function App() {
     <main className="app-shell">
       <header className="app-header">
         <strong>saku.lo</strong>
-        <Button aria-label="Notifications" size="icon" type="button" variant="ghost">
-          <Bell aria-hidden="true" />
-        </Button>
+        <div className="header-actions">
+          <Button aria-label={t.switchLanguage} className="language-toggle" size="sm" type="button" variant="ghost" onClick={() => updateLanguage(language === 'id' ? 'en' : 'id')}>
+            <Languages aria-hidden="true" />
+            <span>{language.toUpperCase()}</span>
+          </Button>
+          <Button aria-label={t.switchTheme} size="icon" type="button" variant="ghost" onClick={() => updateTheme(theme === 'dark' ? 'light' : 'dark')}>
+            {theme === 'dark' ? <Moon aria-hidden="true" /> : <Sun aria-hidden="true" />}
+          </Button>
+          <Button aria-label={t.notifications} size="icon" type="button" variant="ghost">
+            <Bell aria-hidden="true" />
+          </Button>
+        </div>
       </header>
 
       <section className="hero-card">
         <div>
-          <p className="eyebrow">Available Balance</p>
+          <p className="eyebrow">{t.availableBalance}</p>
           <h1>
             <span>{heroMoney.symbol}</span>
             {heroMoney.amount}
           </h1>
-          <p className="subtitle">{selectedAccountName ? `Balance ${selectedAccountName}` : 'Across all active accounts'}</p>
+          <p className="subtitle">{selectedAccountName ? `${t.balancePrefix} ${selectedAccountName}` : t.acrossAccounts}</p>
         </div>
       </section>
 
@@ -301,9 +344,11 @@ function App() {
             filters={filters}
             filterDrawer={filterDrawer}
             formatMoney={formatMoney}
+            language={language}
             reportTotals={reportTotals}
             setFilters={setFilters}
             setFilterDrawer={setFilterDrawer}
+            t={t}
             topCategories={topCategories}
             transactions={filteredTransactions.slice(0, 5)}
           />
@@ -316,6 +361,7 @@ function App() {
             deleteTransaction={deleteTransaction}
             filters={filters}
             formatMoney={formatMoney}
+            t={t}
             setFilters={setFilters}
             transactions={filteredTransactions}
           />
@@ -333,25 +379,26 @@ function App() {
             primaryCurrency={primaryCurrency}
             saveAccount={saveAccount}
             setAccountForm={setAccountForm}
+            t={t}
             updatePrimaryCurrency={updatePrimaryCurrency}
           />
       )}
 
       <nav className="bottom-nav" aria-label="Primary navigation">
-        <Button aria-label="Dashboard" className={tab === 'dashboard' ? 'active' : ''} size="icon" type="button" variant="ghost" onClick={() => setTab('dashboard')}>
+        <Button aria-label={t.dashboard} className={tab === 'dashboard' ? 'active' : ''} size="icon" type="button" variant="ghost" onClick={() => setTab('dashboard')}>
           <LayoutDashboard aria-hidden="true" />
-          <span>Dashboard</span>
+          <span>{t.dashboard}</span>
         </Button>
-        <Button aria-label="Log" className={tab === 'log' ? 'active' : ''} size="icon" type="button" variant="ghost" onClick={() => setTab('log')}>
+        <Button aria-label={t.log} className={tab === 'log' ? 'active' : ''} size="icon" type="button" variant="ghost" onClick={() => setTab('log')}>
           <List aria-hidden="true" />
-          <span>Log</span>
+          <span>{t.log}</span>
         </Button>
-        <Button aria-label="Tambah transaksi" className="bottom-fab" size="icon" type="button" variant="income" onClick={() => openQuickAdd()}>
+        <Button aria-label={t.addTransaction} className="bottom-fab" size="icon" type="button" variant="ghost" onClick={() => openQuickAdd()}>
           <Plus aria-hidden="true" />
         </Button>
-        <Button aria-label="Akun" className={tab === 'accounts' ? 'active' : ''} size="icon" type="button" variant="ghost" onClick={() => setTab('accounts')}>
+        <Button aria-label={t.accountsNav} className={tab === 'accounts' ? 'active' : ''} size="icon" type="button" variant="ghost" onClick={() => setTab('accounts')}>
           <Settings aria-hidden="true" />
-          <span>Akun</span>
+          <span>{t.accountsNav}</span>
         </Button>
       </nav>
 
@@ -360,6 +407,7 @@ function App() {
           accounts={activeAccounts}
           categories={cashflowCategories}
           form={transactionForm}
+          t={t}
           onClose={() => {
             setQuickAddOpen(false)
             setQuickAddStep('type')
@@ -382,9 +430,11 @@ function DashboardTab({
   filters,
   filterDrawer,
   formatMoney,
+  language,
   reportTotals,
   setFilters,
   setFilterDrawer,
+  t,
   topCategories,
   transactions,
 }: {
@@ -393,9 +443,11 @@ function DashboardTab({
   filters: ReportFilters
   filterDrawer: FilterDrawer
   formatMoney: FormatMoney
+  language: Language
   reportTotals: { income: number; expense: number; net: number }
   setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
   setFilterDrawer: React.Dispatch<React.SetStateAction<FilterDrawer>>
+  t: AppText
   topCategories: Array<{ category: Category; amount: number }>
   transactions: MoneyTransaction[]
 }) {
@@ -406,13 +458,12 @@ function DashboardTab({
     <section className="dashboard-stack">
       <Card className="dashboard-toolbar">
         <div>
-          <span className="toolbar-kicker">Report</span>
-          <h2>{formatMonthLabel(filters.month)}</h2>
+          <h2>{formatMonthLabel(filters.month, language, t)}</h2>
         </div>
         <div className="filter-chips" aria-label="Active filters">
-          <button type="button" onClick={() => setFilterDrawer('account')}>{selectedAccount?.name || 'Semua Akun'}</button>
-          <button type="button" onClick={() => setFilterDrawer('category')}>{selectedCategory ? `${selectedCategory.icon} ${selectedCategory.name}` : 'Semua Kategori'}</button>
-          <button type="button" onClick={() => setFilterDrawer('type')}>{filters.type === 'all' ? 'Semua Tipe' : filters.type}</button>
+          <button type="button" onClick={() => setFilterDrawer('account')}>{selectedAccount?.name || t.allAccounts}</button>
+          <button type="button" onClick={() => setFilterDrawer('category')}>{selectedCategory ? `${selectedCategory.icon} ${selectedCategory.name}` : t.allCategories}</button>
+          <button type="button" onClick={() => setFilterDrawer('type')}>{filters.type === 'all' ? t.allTypes : t[filters.type]}</button>
         </div>
       </Card>
 
@@ -424,14 +475,15 @@ function DashboardTab({
           filters={filters}
           onClose={() => setFilterDrawer(null)}
           setFilters={setFilters}
+          t={t}
         />
       )}
 
-      <OverviewPanel formatMoney={formatMoney} totals={reportTotals} />
+      <OverviewPanel formatMoney={formatMoney} t={t} totals={reportTotals} />
 
       <section className="dashboard-grid">
-        <TopCategoriesPanel compact expense={reportTotals.expense} formatMoney={formatMoney} topCategories={topCategories.slice(0, 3)} />
-        <TransactionsPanel compact accounts={accounts} categories={categories} formatMoney={formatMoney} onDelete={null} title="Recent Activity" transactions={transactions.slice(0, 3)} />
+        <TopCategoriesPanel compact expense={reportTotals.expense} formatMoney={formatMoney} t={t} topCategories={topCategories.slice(0, 3)} />
+        <TransactionsPanel compact accounts={accounts} categories={categories} formatMoney={formatMoney} onDelete={null} t={t} title={t.recentActivity} transactions={transactions.slice(0, 3)} />
       </section>
     </section>
   )
@@ -444,6 +496,7 @@ function FilterDrawerSheet({
   filters,
   onClose,
   setFilters,
+  t,
 }: {
   accounts: Account[]
   categories: Category[]
@@ -451,8 +504,9 @@ function FilterDrawerSheet({
   filters: ReportFilters
   onClose: () => void
   setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
+  t: AppText
 }) {
-  const title = filter === 'account' ? 'Pilih Akun' : filter === 'category' ? 'Pilih Kategori' : 'Pilih Tipe'
+  const title = filter === 'account' ? t.chooseAccount : filter === 'category' ? t.chooseCategory : t.chooseType
 
   function choose(update: Partial<ReportFilters>) {
     setFilters((current) => ({ ...current, ...update }))
@@ -475,22 +529,22 @@ function FilterDrawerSheet({
         <div className="filter-options">
           {filter === 'account' && (
             <>
-              <button className={!filters.accountId ? 'active' : ''} type="button" onClick={() => choose({ accountId: '' })}>Semua Akun</button>
+              <button className={!filters.accountId ? 'active' : ''} type="button" onClick={() => choose({ accountId: '' })}>{t.allAccounts}</button>
               {accounts.map((account) => <button className={filters.accountId === account.id ? 'active' : ''} key={account.id} type="button" onClick={() => choose({ accountId: account.id })}>{account.name}</button>)}
             </>
           )}
           {filter === 'category' && (
             <>
-              <button className={!filters.categoryId ? 'active' : ''} type="button" onClick={() => choose({ categoryId: '' })}>Semua Kategori</button>
+              <button className={!filters.categoryId ? 'active' : ''} type="button" onClick={() => choose({ categoryId: '' })}>{t.allCategories}</button>
               {categories.map((category) => <button className={filters.categoryId === category.id ? 'active' : ''} key={category.id} type="button" onClick={() => choose({ categoryId: category.id })}>{category.icon} {category.name}</button>)}
             </>
           )}
           {filter === 'type' && (
             <>
-              <button className={filters.type === 'all' ? 'active' : ''} type="button" onClick={() => choose({ type: 'all' })}>Semua Tipe</button>
-              <button className={filters.type === 'income' ? 'active' : ''} type="button" onClick={() => choose({ type: 'income' })}>Income</button>
-              <button className={filters.type === 'expense' ? 'active' : ''} type="button" onClick={() => choose({ type: 'expense' })}>Expense</button>
-              <button className={filters.type === 'transfer' ? 'active' : ''} type="button" onClick={() => choose({ type: 'transfer' })}>Transfer</button>
+              <button className={filters.type === 'all' ? 'active' : ''} type="button" onClick={() => choose({ type: 'all' })}>{t.allTypes}</button>
+              <button className={filters.type === 'income' ? 'active' : ''} type="button" onClick={() => choose({ type: 'income' })}>{t.income}</button>
+              <button className={filters.type === 'expense' ? 'active' : ''} type="button" onClick={() => choose({ type: 'expense' })}>{t.expense}</button>
+              <button className={filters.type === 'transfer' ? 'active' : ''} type="button" onClick={() => choose({ type: 'transfer' })}>{t.transfer}</button>
             </>
           )}
         </div>
@@ -499,25 +553,24 @@ function FilterDrawerSheet({
   )
 }
 
-function OverviewPanel({ formatMoney, totals }: { formatMoney: FormatMoney; totals: { income: number; expense: number; net: number } }) {
+function OverviewPanel({ formatMoney, t, totals }: { formatMoney: FormatMoney; t: AppText; totals: { income: number; expense: number; net: number } }) {
   return (
     <Card className="overview-card">
       <div className="overview-heading">
-        <span>This month</span>
-        <strong className={totals.net >= 0 ? 'income' : 'expense'}>{formatMoney(totals.net)}</strong>
+        <span>{t.thisMonth}</span>
       </div>
       <div className="overview-grid">
         <div>
-          <span>Income</span>
+          <span>{t.income}</span>
           <strong className="income">{formatMoney(totals.income)}</strong>
         </div>
         <div>
-          <span>Expense</span>
+          <span>{t.expense}</span>
           <strong className="expense">{formatMoney(totals.expense)}</strong>
         </div>
       </div>
       <div className="net-row">
-        <span>Net Cashflow</span>
+        <span>{t.netCashflow}</span>
         <strong className={totals.net >= 0 ? 'income' : 'expense'}>{formatMoney(totals.net)}</strong>
       </div>
     </Card>
@@ -531,6 +584,7 @@ function LogTab({
   filters,
   formatMoney,
   setFilters,
+  t,
   transactions,
 }: {
   accounts: Account[]
@@ -539,12 +593,13 @@ function LogTab({
   filters: ReportFilters
   formatMoney: FormatMoney
   setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
+  t: AppText
   transactions: MoneyTransaction[]
 }) {
   return (
     <>
-      <ReportFiltersPanel accounts={accounts} categories={categories} filters={filters} setFilters={setFilters} />
-      <TransactionsPanel accounts={accounts} categories={categories} formatMoney={formatMoney} onDelete={deleteTransaction} title="Log Bulan Berjalan" transactions={transactions} />
+      <ReportFiltersPanel accounts={accounts} categories={categories} filters={filters} setFilters={setFilters} t={t} />
+      <TransactionsPanel accounts={accounts} categories={categories} formatMoney={formatMoney} onDelete={deleteTransaction} t={t} title={t.currentMonthLog} transactions={transactions} />
     </>
   )
 }
@@ -559,6 +614,7 @@ function QuickAddDialog({
   saveTransaction,
   setForm,
   step,
+  t,
   updateTransactionType,
 }: {
   accounts: Account[]
@@ -570,6 +626,7 @@ function QuickAddDialog({
   saveTransaction: (event: FormEvent<HTMLFormElement>) => void
   setForm: React.Dispatch<React.SetStateAction<TransactionForm>>
   step: QuickAddStep
+  t: AppText
   updateTransactionType: (type: TransactionType) => void
 }) {
   return (
@@ -577,10 +634,10 @@ function QuickAddDialog({
       <Card className="quick-dialog" role="dialog" aria-modal="true" aria-labelledby="quick-add-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="quick-dialog-header">
           <div>
-            <CardTitle id="quick-add-title">Quick Add</CardTitle>
-            <CardDescription>{step === 'type' ? 'Pilih jenis transaksi.' : 'Isi detail transaksi.'}</CardDescription>
+            <CardTitle id="quick-add-title">{t.quickAdd}</CardTitle>
+            <CardDescription>{step === 'type' ? t.pickTransactionType : t.fillTransactionDetails}</CardDescription>
           </div>
-          <Button aria-label="Tutup" size="icon" variant="ghost" type="button" onClick={onClose}>
+          <Button aria-label={t.close} size="icon" variant="ghost" type="button" onClick={onClose}>
             <X aria-hidden="true" />
           </Button>
         </div>
@@ -589,29 +646,30 @@ function QuickAddDialog({
           <div className="quick-type-grid">
             <Button className="quick-type-button expense" variant="ghost" type="button" onClick={() => onPickType('expense')}>
               <span>↓</span>
-              <strong>Expense</strong>
-              <small>Catat pengeluaran</small>
+              <strong>{t.expense}</strong>
+              <small>{t.recordExpense}</small>
             </Button>
             <Button className="quick-type-button income" variant="ghost" type="button" onClick={() => onPickType('income')}>
               <span>↑</span>
-              <strong>Income</strong>
-              <small>Catat pemasukan</small>
+              <strong>{t.income}</strong>
+              <small>{t.recordIncome}</small>
             </Button>
             <Button className="quick-type-button transfer" variant="ghost" type="button" onClick={() => onPickType('transfer')}>
               <span>↔</span>
-              <strong>Transfer</strong>
-              <small>Pindah antar akun</small>
+              <strong>{t.transfer}</strong>
+              <small>{t.moveBetweenAccounts}</small>
             </Button>
           </div>
         ) : (
           <>
-            <Button className="quick-back" size="sm" variant="ghost" type="button" onClick={onBack}>← Pilih tipe lain</Button>
+            <Button className="quick-back" size="sm" variant="ghost" type="button" onClick={onBack}>{t.pickAnotherType}</Button>
             <TransactionFormPanel
               accounts={accounts}
               categories={categories}
               form={form}
               saveTransaction={saveTransaction}
               setForm={setForm}
+              t={t}
               updateTransactionType={updateTransactionType}
             />
           </>
@@ -632,6 +690,7 @@ function AccountsTab({
   primaryCurrency,
   saveAccount,
   setAccountForm,
+  t,
   updatePrimaryCurrency,
 }: {
   accountBalances: Map<string, number>
@@ -644,32 +703,33 @@ function AccountsTab({
   primaryCurrency: PrimaryCurrency
   saveAccount: (event: FormEvent<HTMLFormElement>) => void
   setAccountForm: React.Dispatch<React.SetStateAction<AccountForm>>
+  t: AppText
   updatePrimaryCurrency: (value: PrimaryCurrency) => void
 }) {
   return (
     <section className="content-grid accounts-grid">
       <form className="panel transaction-form" onSubmit={saveAccount}>
         <CardHeader className="panel-heading">
-          <CardTitle>{accountForm.id ? 'Edit Akun' : 'Tambah Akun'}</CardTitle>
-          <CardDescription>Untuk bank, cash, e-wallet, atau kartu.</CardDescription>
+          <CardTitle>{accountForm.id ? t.editAccount : t.addAccount}</CardTitle>
+          <CardDescription>{t.accountDescription}</CardDescription>
         </CardHeader>
         <Label>
-          Mata Uang Utama
+          {t.primaryCurrency}
           <Select disabled={isCurrencyLocked} value={primaryCurrency} onValueChange={(value) => updatePrimaryCurrency(value as PrimaryCurrency)}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {currencyOptions.map((option) => <SelectItem key={option.code} value={option.code}>{option.code} - {option.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          {isCurrencyLocked && <span className="helper-text">Currency dikunci setelah ada transaksi untuk mencegah saldo terbaca salah.</span>}
+          {isCurrencyLocked && <span className="helper-text">{t.currencyLocked}</span>}
         </Label>
         <Label>
-          Nama Akun
+          {t.accountName}
           <Input required placeholder="BCA, Cash, ShopeePay" value={accountForm.name} onChange={(event) => setAccountForm({ ...accountForm, name: event.target.value })} />
         </Label>
         <div className="form-row">
           <Label>
-            Tipe
+            {t.type}
             <Select value={accountForm.type} onValueChange={(value) => setAccountForm({ ...accountForm, type: value as Account['type'] })}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -681,23 +741,23 @@ function AccountsTab({
             </Select>
           </Label>
           <Label>
-            Warna
+            {t.color}
             <Input type="color" value={accountForm.color} onChange={(event) => setAccountForm({ ...accountForm, color: event.target.value })} />
           </Label>
         </div>
         <Label>
-          Initial Balance
+          {t.initialBalance}
           <Input inputMode="decimal" type="number" value={accountForm.initialBalance} onChange={(event) => setAccountForm({ ...accountForm, initialBalance: event.target.value })} />
         </Label>
         <div className="button-row">
-          <Button variant="income" type="submit">{accountForm.id ? 'Update Akun' : 'Simpan Akun'}</Button>
-          {accountForm.id && <Button variant="ghost" type="button" onClick={() => setAccountForm(emptyAccountForm)}>Batal</Button>}
+          <Button variant="income" type="submit">{accountForm.id ? t.updateAccount : t.saveAccount}</Button>
+          {accountForm.id && <Button variant="ghost" type="button" onClick={() => setAccountForm(emptyAccountForm)}>{t.cancel}</Button>}
         </div>
       </form>
       <Card>
         <CardHeader className="panel-heading">
-          <CardTitle>Daftar Akun</CardTitle>
-          <CardDescription>{accounts.length} akun aktif.</CardDescription>
+          <CardTitle>{t.accountList}</CardTitle>
+          <CardDescription>{accounts.length} {t.activeAccounts}</CardDescription>
         </CardHeader>
         <CardContent className="account-list">
           {accounts.map((account) => (
@@ -709,8 +769,8 @@ function AccountsTab({
               </div>
               <strong>{formatMoney(accountBalances.get(account.id) || 0)}</strong>
               <div className="account-actions">
-                <Button size="sm" variant="ghost" type="button" onClick={() => editAccount(account)}>Edit</Button>
-                <Button size="sm" variant="destructive" type="button" onClick={() => archiveAccount(account)}>Archive</Button>
+                <Button size="sm" variant="ghost" type="button" onClick={() => editAccount(account)}>{t.edit}</Button>
+                <Button size="sm" variant="destructive" type="button" onClick={() => archiveAccount(account)}>{t.archive}</Button>
               </div>
             </article>
           ))}
@@ -726,48 +786,50 @@ function ReportFiltersPanel({
   compact = false,
   filters,
   setFilters,
+  t,
 }: {
   accounts: Account[]
   categories: Category[]
   compact?: boolean
   filters: ReportFilters
   setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
+  t: AppText
 }) {
   return (
     <Card className={compact ? 'filter-panel compact-filter-panel' : 'filter-panel'}>
       <Label>
-        Bulan
+        {t.month}
         <Input type="month" value={filters.month} onChange={(event) => setFilters((current) => ({ ...current, month: event.target.value }))} />
       </Label>
       <Label>
-        Akun
+        {t.account}
         <Select value={filters.accountId || 'all-accounts'} onValueChange={(value) => setFilters((current) => ({ ...current, accountId: value === 'all-accounts' ? '' : value }))}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all-accounts">Semua Akun</SelectItem>
+            <SelectItem value="all-accounts">{t.allAccounts}</SelectItem>
             {accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </Label>
       <Label>
-        Kategori
+        {t.category}
         <Select value={filters.categoryId || 'all-categories'} onValueChange={(value) => setFilters((current) => ({ ...current, categoryId: value === 'all-categories' ? '' : value }))}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all-categories">Semua Kategori</SelectItem>
+            <SelectItem value="all-categories">{t.allCategories}</SelectItem>
             {categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.icon} {category.name}</SelectItem>)}
           </SelectContent>
         </Select>
       </Label>
       <Label>
-        Tipe
+        {t.type}
         <Select value={filters.type} onValueChange={(value) => setFilters((current) => ({ ...current, type: value as ReportFilters['type'] }))}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Semua Tipe</SelectItem>
-            <SelectItem value="income">Income</SelectItem>
-            <SelectItem value="expense">Expense</SelectItem>
-            <SelectItem value="transfer">Transfer</SelectItem>
+            <SelectItem value="all">{t.allTypes}</SelectItem>
+            <SelectItem value="income">{t.income}</SelectItem>
+            <SelectItem value="expense">{t.expense}</SelectItem>
+            <SelectItem value="transfer">{t.transfer}</SelectItem>
           </SelectContent>
         </Select>
       </Label>
@@ -781,6 +843,7 @@ function TransactionFormPanel({
   form,
   saveTransaction,
   setForm,
+  t,
   updateTransactionType,
 }: {
   accounts: Account[]
@@ -788,6 +851,7 @@ function TransactionFormPanel({
   form: TransactionForm
   saveTransaction: (event: FormEvent<HTMLFormElement>) => void
   setForm: React.Dispatch<React.SetStateAction<TransactionForm>>
+  t: AppText
   updateTransactionType: (type: TransactionType) => void
 }) {
   const toAccountOptions = accounts.filter((account) => account.id !== form.fromAccountId)
@@ -803,59 +867,59 @@ function TransactionFormPanel({
   return (
     <form className="panel transaction-form" onSubmit={saveTransaction}>
       <CardHeader className="panel-heading">
-        <CardTitle>Tambah Transaksi</CardTitle>
-        <CardDescription>Income, expense, atau transfer antar akun.</CardDescription>
+        <CardTitle>{t.addTransactionTitle}</CardTitle>
+        <CardDescription>{t.transactionDescription}</CardDescription>
       </CardHeader>
       <div className="segmented-control three" role="tablist" aria-label="Transaction type">
-        <Button variant="ghost" type="button" className={form.type === 'expense' ? 'active expense' : ''} onClick={() => updateTransactionType('expense')}>Expense</Button>
-        <Button variant="ghost" type="button" className={form.type === 'income' ? 'active income' : ''} onClick={() => updateTransactionType('income')}>Income</Button>
-        <Button variant="ghost" type="button" className={form.type === 'transfer' ? 'active transfer' : ''} onClick={() => updateTransactionType('transfer')}>Transfer</Button>
+        <Button variant="ghost" type="button" className={form.type === 'expense' ? 'active expense' : ''} onClick={() => updateTransactionType('expense')}>{t.expense}</Button>
+        <Button variant="ghost" type="button" className={form.type === 'income' ? 'active income' : ''} onClick={() => updateTransactionType('income')}>{t.income}</Button>
+        <Button variant="ghost" type="button" className={form.type === 'transfer' ? 'active transfer' : ''} onClick={() => updateTransactionType('transfer')}>{t.transfer}</Button>
       </div>
       <Label>
-        Amount
+        {t.amount}
         <Input className={`amount-input ${form.type}`} inputMode="decimal" min="0" placeholder="50000" required type="number" value={form.amount} onChange={(event) => setForm({ ...form, amount: event.target.value })} />
       </Label>
       <Label>
-        Date
+        {t.date}
         <Input required type="date" value={form.date} onChange={(event) => setForm({ ...form, date: event.target.value })} />
       </Label>
       {form.type === 'transfer' ? (
         <div className="form-row">
           <Label>
-            From
+            {t.from}
             <Select required value={form.fromAccountId} onValueChange={updateFromAccount}>
-              <SelectTrigger><SelectValue placeholder="Pilih akun" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t.chooseAnAccount} /></SelectTrigger>
               <SelectContent>
                 {accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </Label>
           <Label>
-            To
+            {t.to}
             <Select required value={form.toAccountId} onValueChange={(value) => setForm({ ...form, toAccountId: value })}>
-              <SelectTrigger><SelectValue placeholder="Pilih akun" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t.chooseAnAccount} /></SelectTrigger>
               <SelectContent>
                 {toAccountOptions.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
               </SelectContent>
             </Select>
-            {toAccountOptions.length === 0 && <span className="helper-text">Buat akun kedua untuk transfer antar akun.</span>}
+            {toAccountOptions.length === 0 && <span className="helper-text">{t.needSecondAccount}</span>}
           </Label>
         </div>
       ) : (
         <div className="form-row">
           <Label>
-            Account
+            {t.account}
             <Select required value={form.accountId} onValueChange={(value) => setForm({ ...form, accountId: value })}>
-              <SelectTrigger><SelectValue placeholder="Pilih akun" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t.chooseAnAccount} /></SelectTrigger>
               <SelectContent>
                 {accounts.map((account) => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </Label>
           <Label>
-            Category
+            {t.category}
             <Select required value={form.categoryId} onValueChange={(value) => setForm({ ...form, categoryId: value })}>
-              <SelectTrigger><SelectValue placeholder="Pilih kategori" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t.chooseACategory} /></SelectTrigger>
               <SelectContent>
                 {categories.map((category) => <SelectItem key={category.id} value={category.id}>{category.icon} {category.name}</SelectItem>)}
               </SelectContent>
@@ -864,10 +928,10 @@ function TransactionFormPanel({
         </div>
       )}
       <Label>
-        Note
-        <Input placeholder="Contoh: Makan siang / pindah saldo" value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} />
+        {t.note}
+        <Input placeholder={t.notePlaceholder} value={form.note} onChange={(event) => setForm({ ...form, note: event.target.value })} />
       </Label>
-      <Button variant={form.type === 'transfer' ? 'transfer' : form.type} type="submit">Simpan</Button>
+      <Button variant={form.type === 'transfer' ? 'transfer' : form.type} type="submit">{t.save}</Button>
     </form>
   )
 }
@@ -876,26 +940,28 @@ function TopCategoriesPanel({
   compact = false,
   expense,
   formatMoney,
+  t,
   topCategories,
 }: {
   compact?: boolean
   expense: number
   formatMoney: FormatMoney
+  t: AppText
   topCategories: Array<{ category: Category; amount: number }>
 }) {
   return (
     <Card className={compact ? 'compact-panel' : ''}>
       <CardHeader className="panel-heading">
-        <CardTitle>{compact ? 'Top Spending' : 'Top Categories'}</CardTitle>
-        <CardDescription>Expense sesuai filter report.</CardDescription>
+        <CardTitle>{compact ? t.topSpending : t.topCategories}</CardTitle>
+        <CardDescription>{t.reportExpenseDescription}</CardDescription>
       </CardHeader>
       <CardContent className="category-list">
-        {topCategories.length === 0 ? <p className="empty-state">Belum ada expense di filter ini.</p> : topCategories.map(({ category, amount }) => (
+        {topCategories.length === 0 ? <p className="empty-state">{t.noExpense}</p> : topCategories.map(({ category, amount }) => (
           <div className="category-row" key={category.id}>
             <span className="category-icon" style={{ background: category.color }}>{category.icon}</span>
             <div>
               <strong>{category.name}</strong>
-              <small>{Math.round((amount / Math.max(expense, 1)) * 100)}% dari expense</small>
+              <small>{Math.round((amount / Math.max(expense, 1)) * 100)}% {t.ofExpense}</small>
               {compact && <span className="spending-bar"><span style={{ width: `${Math.round((amount / Math.max(expense, 1)) * 100)}%`, background: category.color }} /></span>}
             </div>
             <span>{formatMoney(amount)}</span>
@@ -912,6 +978,7 @@ function TransactionsPanel({
   compact = false,
   formatMoney,
   onDelete,
+  t,
   title,
   transactions,
 }: {
@@ -920,6 +987,7 @@ function TransactionsPanel({
   compact?: boolean
   formatMoney: FormatMoney
   onDelete: ((id: string) => void) | null
+  t: AppText
   title: string
   transactions: MoneyTransaction[]
 }) {
@@ -927,11 +995,11 @@ function TransactionsPanel({
     <Card className={compact ? 'transaction-list-panel compact-panel' : 'transaction-list-panel'}>
       <CardHeader className="panel-heading">
         <CardTitle>{title}</CardTitle>
-        <CardDescription>{transactions.length} transaksi.</CardDescription>
+        <CardDescription>{transactions.length} {t.transactionsCount}</CardDescription>
       </CardHeader>
       <CardContent className={compact ? 'transaction-list compact-transaction-list' : 'transaction-list'}>
-        {transactions.length === 0 ? <p className="empty-state">Belum ada transaksi pada filter ini.</p> : transactions.map((transaction) => (
-          <TransactionItem accounts={accounts} categories={categories} formatMoney={formatMoney} key={transaction.id} onDelete={onDelete} transaction={transaction} />
+        {transactions.length === 0 ? <p className="empty-state">{t.noTransactions}</p> : transactions.map((transaction) => (
+          <TransactionItem accounts={accounts} categories={categories} formatMoney={formatMoney} key={transaction.id} onDelete={onDelete} t={t} transaction={transaction} />
         ))}
       </CardContent>
     </Card>
@@ -943,12 +1011,14 @@ function TransactionItem({
   categories,
   formatMoney,
   onDelete,
+  t,
   transaction,
 }: {
   accounts: Account[]
   categories: Category[]
   formatMoney: FormatMoney
   onDelete: ((id: string) => void) | null
+  t: AppText
   transaction: MoneyTransaction
 }) {
   const isTransfer = transaction.type === 'transfer'
@@ -956,10 +1026,10 @@ function TransactionItem({
   const account = isTransfer ? null : accounts.find((item) => item.id === transaction.accountId)
   const fromAccount = isTransfer ? accounts.find((item) => item.id === transaction.fromAccountId) : null
   const toAccount = isTransfer ? accounts.find((item) => item.id === transaction.toAccountId) : null
-  const label = isTransfer ? 'Transfer' : category?.name || 'Uncategorized'
+  const label = isTransfer ? t.transfer : category?.name || t.uncategorized
   const detail = isTransfer
-    ? `${fromAccount?.name || 'Unknown'} → ${toAccount?.name || 'Unknown'}`
-    : account?.name || 'No account'
+    ? `${fromAccount?.name || t.unknown} → ${toAccount?.name || t.unknown}`
+    : account?.name || t.noAccount
 
   return (
     <article className="transaction-item">
@@ -969,7 +1039,7 @@ function TransactionItem({
         <small>{transaction.date} · {detail}{transaction.note ? ` · ${transaction.note}` : ''}</small>
       </div>
       <strong className={transaction.type}>{formatTransactionAmount(transaction, formatMoney)}</strong>
-      {onDelete && <Button aria-label="Delete transaction" size="sm" variant="destructive" type="button" onClick={() => onDelete(transaction.id)}>Delete</Button>}
+      {onDelete && <Button aria-label={t.deleteTransaction} size="sm" variant="destructive" type="button" onClick={() => onDelete(transaction.id)}>{t.delete}</Button>}
     </article>
   )
 }
@@ -980,12 +1050,12 @@ function formatTransactionAmount(transaction: MoneyTransaction, formatMoney: For
   return formatMoney(transaction.amount)
 }
 
-function formatMonthLabel(month: string) {
-  if (!month) return 'Semua Bulan'
+function formatMonthLabel(month: string, language: Language, t: AppText) {
+  if (!month) return t.allMonths
   const [year, monthIndex] = month.split('-').map(Number)
   if (!year || !monthIndex) return month
 
-  return new Intl.DateTimeFormat('id-ID', {
+  return new Intl.DateTimeFormat(language === 'id' ? 'id-ID' : 'en-US', {
     month: 'long',
     year: 'numeric',
   }).format(new Date(year, monthIndex - 1, 1))

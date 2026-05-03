@@ -377,6 +377,9 @@ Interaction priorities:
 - Filters should be visible and predictable.
 - Account balances should be understandable without manual recalculation.
 - Transfer should feel separate from income/expense.
+- Empty report/list states should feel reassuring, not blank or broken. Use friendly copy and a lightweight illustration.
+- Successful write/delete/archive actions should show immediate toast feedback.
+- Supported devices should receive subtle haptic feedback with `navigator.vibrate(10)` after meaningful data actions.
 
 Technical UI rules:
 
@@ -385,6 +388,8 @@ Technical UI rules:
 - Do not rely on color alone: income uses `+`, expense uses `-`, and transfer uses `↔`.
 - Save transaction triggers `navigator.vibrate(10)` where supported for subtle haptic feedback.
 - Transaction entry uses a bottom drawer pattern so controls stay reachable on mobile.
+- Hero balance changes should animate over a short duration instead of snapping, unless `prefers-reduced-motion` is enabled.
+- Toast feedback should be local, shadcn-style, and accessible via `role="status"`/`aria-live`.
 
 Styling direction:
 

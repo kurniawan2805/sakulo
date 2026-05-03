@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Bell, Languages, LayoutDashboard, List, Moon, Plus, Settings, Sun, X } from 'lucide-react'
 import './App.css'
 import { Button } from '@/components/ui/button'
@@ -59,6 +59,11 @@ type Snapshot = {
 type FormatMoney = (value: number) => string
 type AppText = Translation
 
+type ToastMessage = {
+  id: string
+  title: string
+}
+
 const today = () => new Date().toISOString().slice(0, 10)
 const thisMonth = () => today().slice(0, 7)
 
@@ -79,6 +84,7 @@ function App() {
   const [primaryCurrency, setPrimaryCurrency] = useState<PrimaryCurrency>('IDR')
   const [theme, setTheme] = useState<ThemePreference>('dark')
   const [language, setLanguage] = useState<Language>('id')
+  const [toasts, setToasts] = useState<ToastMessage[]>([])
   const [filters, setFilters] = useState<ReportFilters>({
     month: thisMonth(),
     accountId: '',
@@ -176,9 +182,10 @@ function App() {
     [filteredTransactions, snapshot.categories],
   )
   const heroBalance = filters.accountId ? accountBalances.get(filters.accountId) || 0 : totalBalance
+  const animatedHeroBalance = useAnimatedNumber(heroBalance)
   const selectedAccountName = activeAccounts.find((account) => account.id === filters.accountId)?.name
   const formatMoney = (value: number) => formatMinorMoney(value, primaryCurrency)
-  const heroMoney = getMoneyParts(formatMoney(heroBalance))
+  const heroMoney = getMoneyParts(formatMoney(animatedHeroBalance))
   const isCurrencyLocked = snapshot.transactions.length > 0
   const t = translations[language]
 
@@ -187,6 +194,19 @@ function App() {
       ? ''
       : snapshot.categories.find((category) => category.type === type)?.id || ''
     setTransactionForm((current) => ({ ...current, type, categoryId: nextCategory }))
+  }
+
+  function notify(title: string) {
+    const id = makeId('toast')
+    setToasts((current) => [...current, { id, title }])
+    window.setTimeout(() => {
+      setToasts((current) => current.filter((toast) => toast.id !== id))
+    }, 2600)
+  }
+
+  function subtleFeedback(title: string) {
+    navigator.vibrate?.(10)
+    notify(title)
   }
 
   async function saveTransaction(event: FormEvent<HTMLFormElement>) {
@@ -224,7 +244,7 @@ function App() {
       })
     }
 
-    navigator.vibrate?.(10)
+    subtleFeedback(t.transactionSaved)
     setTransactionForm((current) => ({ ...current, amount: '', note: '' }))
     setQuickAddOpen(false)
     setQuickAddStep('type')
@@ -232,6 +252,7 @@ function App() {
 
   async function deleteTransaction(id: string) {
     await db.transactions.delete(id)
+    subtleFeedback(t.transactionDeleted)
   }
 
   async function saveAccount(event: FormEvent<HTMLFormElement>) {
@@ -247,11 +268,13 @@ function App() {
     }
     if (!payload.name) return
 
+    const isEditing = Boolean(accountForm.id)
     if (accountForm.id) {
       await db.accounts.update(accountForm.id, payload)
     } else {
       await db.accounts.add({ ...payload, id: makeId('acc'), createdAt: timestamp })
     }
+    subtleFeedback(isEditing ? t.accountUpdatedToast : t.accountSavedToast)
     setAccountForm(emptyAccountForm)
   }
 
@@ -295,6 +318,7 @@ function App() {
 
   async function archiveAccount(account: Account) {
     await db.accounts.update(account.id, { archived: true, updatedAt: getTimestamp() })
+    subtleFeedback(t.accountArchived)
     if (filters.accountId === account.id) setFilters((current) => ({ ...current, accountId: '' }))
   }
 
@@ -420,6 +444,7 @@ function App() {
           updateTransactionType={updateTransactionType}
         />
       )}
+      <ToastViewport toasts={toasts} />
     </main>
   )
 }
@@ -956,7 +981,7 @@ function TopCategoriesPanel({
         <CardDescription>{t.reportExpenseDescription}</CardDescription>
       </CardHeader>
       <CardContent className="category-list">
-        {topCategories.length === 0 ? <p className="empty-state">{t.noExpense}</p> : topCategories.map(({ category, amount }) => (
+        {topCategories.length === 0 ? <FriendlyEmptyState description={t.emptySpendingDescription} tone="spending" title={t.emptySpendingTitle} /> : topCategories.map(({ category, amount }) => (
           <div className="category-row" key={category.id}>
             <span className="category-icon" style={{ background: category.color }}>{category.icon}</span>
             <div>
@@ -998,7 +1023,7 @@ function TransactionsPanel({
         <CardDescription>{transactions.length} {t.transactionsCount}</CardDescription>
       </CardHeader>
       <CardContent className={compact ? 'transaction-list compact-transaction-list' : 'transaction-list'}>
-        {transactions.length === 0 ? <p className="empty-state">{t.noTransactions}</p> : transactions.map((transaction) => (
+        {transactions.length === 0 ? <FriendlyEmptyState description={t.emptyMonthDescription} title={t.emptyMonthTitle} /> : transactions.map((transaction) => (
           <TransactionItem accounts={accounts} categories={categories} formatMoney={formatMoney} key={transaction.id} onDelete={onDelete} t={t} transaction={transaction} />
         ))}
       </CardContent>
@@ -1042,6 +1067,80 @@ function TransactionItem({
       {onDelete && <Button aria-label={t.deleteTransaction} size="sm" variant="destructive" type="button" onClick={() => onDelete(transaction.id)}>{t.delete}</Button>}
     </article>
   )
+}
+
+function FriendlyEmptyState({
+  description,
+  title,
+  tone = 'safe',
+}: {
+  description: string
+  title: string
+  tone?: 'safe' | 'spending'
+}) {
+  return (
+    <div className={`empty-state friendly-empty ${tone}`}>
+      <div className="empty-illustration" aria-hidden="true">
+        <span className="empty-orbit" />
+        <span className="empty-wallet" />
+        <span className="empty-coin" />
+      </div>
+      <div>
+        <strong>{title}</strong>
+        <p>{description}</p>
+      </div>
+    </div>
+  )
+}
+
+function ToastViewport({ toasts }: { toasts: ToastMessage[] }) {
+  if (toasts.length === 0) return null
+
+  return (
+    <div className="toast-viewport" role="status" aria-live="polite" aria-atomic="true">
+      {toasts.map((toast) => (
+        <div className="toast-card" key={toast.id}>
+          <span aria-hidden="true">✓</span>
+          <strong>{toast.title}</strong>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function useAnimatedNumber(value: number, duration = 500) {
+  const [displayValue, setDisplayValue] = useState(value)
+  const displayValueRef = useRef(value)
+
+  useEffect(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (prefersReducedMotion) {
+      const frame = requestAnimationFrame(() => {
+        displayValueRef.current = value
+        setDisplayValue(value)
+      })
+      return () => cancelAnimationFrame(frame)
+    }
+
+    let frame = 0
+    const startValue = displayValueRef.current
+    const delta = value - startValue
+    const start = performance.now()
+
+    function tick(now: number) {
+      const progress = Math.min((now - start) / duration, 1)
+      const eased = 1 - (1 - progress) ** 3
+      const nextValue = Math.round(startValue + delta * eased)
+      displayValueRef.current = nextValue
+      setDisplayValue(nextValue)
+      if (progress < 1) frame = requestAnimationFrame(tick)
+    }
+
+    frame = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frame)
+  }, [duration, value])
+
+  return displayValue
 }
 
 function formatTransactionAmount(transaction: MoneyTransaction, formatMoney: FormatMoney) {

@@ -65,6 +65,15 @@ Future shadcn candidates:
 - Calendar/date picker for richer date selection.
 - Popover/Command for searchable account/category pickers.
 
+## Global Layout
+
+- Compact sticky header around 60px high.
+- Left side: small `saku.lo` logo.
+- Right side: utility icon slot.
+- Primary navigation lives in a fixed bottom navigation bar, not in the content column.
+- Bottom navigation uses a glassmorphism surface with backdrop blur.
+- Add transaction is the prominent FAB inside the bottom navigation area.
+
 ## Main Screens
 
 ### Dashboard
@@ -74,8 +83,8 @@ Dashboard adalah layar report ringkas.
 Komponen utama:
 
 - Total balance atau balance akun terpilih
-- Compact report toolbar with month/account/category/type chips
-- Collapsible filter panel, hidden by default
+- Compact report toolbar with clickable account/category/type chips
+- Filter selection opens a bottom drawer, not an inline form or large button
 - Compact monthly overview strip for income, expense, and net cashflow
 - Top spending list, limited to the most important categories
 - Recent activity, limited to a few transactions
@@ -94,6 +103,7 @@ Catatan behavior:
 - Jika filter akun kosong, hero balance menampilkan total balance semua akun aktif.
 - Dashboard should prioritize insight density. Full filters belong in `Log`; dashboard filters are compact and collapsible.
 - Dashboard recent activity is read-only and should not show delete actions.
+- Dashboard must avoid box-within-a-box nesting. Use surface depth and spacing instead of inner bordered containers.
 
 ### Log
 
@@ -334,7 +344,15 @@ Visual direction:
 - Dark high-contrast hero
 - Rounded cards
 - Strong financial colors: emerald `#34d399` for income, rose `#f87171` for expense, blue for transfer
-- Simple tab navigation
+- Bottom navigation instead of top/mid-page tabs
+
+Hero balance rules:
+
+- No nested gray balance container inside the hero.
+- Balance text floats directly over the dark mesh-gradient hero.
+- Amount uses large monospaced typography for precision.
+- Currency symbol is visually smaller than the amount.
+- IDR display should not show decimal points.
 
 Interaction priorities:
 
@@ -358,6 +376,7 @@ Styling direction:
 - CSS variables define theme color tokens and feed the component layer.
 - Active tab state should remain subtle: text/border emphasis instead of a heavy filled shade.
 - Date picker can be introduced after the base component system stays stable.
+- Inner cards should avoid borders unless absolutely needed; prefer `#151921`-style surfaces, subtle shadows, and spacious padding.
 
 ## Current Limitations
 

@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
-import { Plus, X } from 'lucide-react'
+import { Bell, LayoutDashboard, List, Plus, Settings, X } from 'lucide-react'
 import './App.css'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   db,
   getTimestamp,
@@ -28,6 +27,7 @@ import {
 
 type Tab = 'dashboard' | 'log' | 'accounts'
 type QuickAddStep = 'type' | 'form'
+type FilterDrawer = 'account' | 'category' | 'type' | null
 
 type TransactionForm = {
   type: TransactionType
@@ -71,7 +71,7 @@ function App() {
   const [tab, setTab] = useState<Tab>('dashboard')
   const [quickAddOpen, setQuickAddOpen] = useState(false)
   const [quickAddStep, setQuickAddStep] = useState<QuickAddStep>('type')
-  const [dashboardFiltersOpen, setDashboardFiltersOpen] = useState(false)
+  const [filterDrawer, setFilterDrawer] = useState<FilterDrawer>(null)
   const [snapshot, setSnapshot] = useState<Snapshot>({ accounts: [], categories: [], transactions: [] })
   const [primaryCurrency, setPrimaryCurrency] = useState<PrimaryCurrency>('IDR')
   const [filters, setFilters] = useState<ReportFilters>({
@@ -163,6 +163,7 @@ function App() {
   const heroBalance = filters.accountId ? accountBalances.get(filters.accountId) || 0 : totalBalance
   const selectedAccountName = activeAccounts.find((account) => account.id === filters.accountId)?.name
   const formatMoney = (value: number) => formatMinorMoney(value, primaryCurrency)
+  const heroMoney = getMoneyParts(formatMoney(heroBalance))
   const isCurrencyLocked = snapshot.transactions.length > 0
 
   function updateTransactionType(type: TransactionType) {
@@ -275,41 +276,40 @@ function App() {
 
   return (
     <main className="app-shell">
+      <header className="app-header">
+        <strong>saku.lo</strong>
+        <Button aria-label="Notifications" size="icon" type="button" variant="ghost">
+          <Bell aria-hidden="true" />
+        </Button>
+      </header>
+
       <section className="hero-card">
         <div>
-          <p className="eyebrow">Local-first PWA</p>
-          <h1>saku.lo</h1>
-          <p className="subtitle">Local-only, logically organized personal finance manager.</p>
-        </div>
-        <div className="balance-card">
-          <span>{selectedAccountName ? `Balance ${selectedAccountName}` : 'Total Balance'}</span>
-          <strong>{formatMoney(heroBalance)}</strong>
+          <p className="eyebrow">Available Balance</p>
+          <h1>
+            <span>{heroMoney.symbol}</span>
+            {heroMoney.amount}
+          </h1>
+          <p className="subtitle">{selectedAccountName ? `Balance ${selectedAccountName}` : 'Across all active accounts'}</p>
         </div>
       </section>
 
-      <Tabs value={tab} onValueChange={(value) => setTab(value as Tab)}>
-        <TabsList className="tab-nav" aria-label="Main navigation">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="log">Log</TabsTrigger>
-          <TabsTrigger value="accounts">Akun</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="dashboard">
+      {tab === 'dashboard' && (
           <DashboardTab
             accounts={activeAccounts}
             categories={snapshot.categories}
-            filtersOpen={dashboardFiltersOpen}
             filters={filters}
+            filterDrawer={filterDrawer}
             formatMoney={formatMoney}
             reportTotals={reportTotals}
             setFilters={setFilters}
-            setFiltersOpen={setDashboardFiltersOpen}
+            setFilterDrawer={setFilterDrawer}
             topCategories={topCategories}
             transactions={filteredTransactions.slice(0, 5)}
           />
-        </TabsContent>
+      )}
 
-        <TabsContent value="log">
+      {tab === 'log' && (
           <LogTab
             accounts={activeAccounts}
             categories={snapshot.categories}
@@ -319,9 +319,9 @@ function App() {
             setFilters={setFilters}
             transactions={filteredTransactions}
           />
-        </TabsContent>
+      )}
 
-        <TabsContent value="accounts">
+      {tab === 'accounts' && (
           <AccountsTab
             accountBalances={accountBalances}
             accountForm={accountForm}
@@ -335,12 +335,25 @@ function App() {
             setAccountForm={setAccountForm}
             updatePrimaryCurrency={updatePrimaryCurrency}
           />
-        </TabsContent>
-      </Tabs>
+      )}
 
-      <Button aria-label="Tambah transaksi" className="fab" size="icon" type="button" variant="income" onClick={() => openQuickAdd()}>
-        <Plus aria-hidden="true" />
-      </Button>
+      <nav className="bottom-nav" aria-label="Primary navigation">
+        <Button aria-label="Dashboard" className={tab === 'dashboard' ? 'active' : ''} size="icon" type="button" variant="ghost" onClick={() => setTab('dashboard')}>
+          <LayoutDashboard aria-hidden="true" />
+          <span>Dashboard</span>
+        </Button>
+        <Button aria-label="Log" className={tab === 'log' ? 'active' : ''} size="icon" type="button" variant="ghost" onClick={() => setTab('log')}>
+          <List aria-hidden="true" />
+          <span>Log</span>
+        </Button>
+        <Button aria-label="Tambah transaksi" className="bottom-fab" size="icon" type="button" variant="income" onClick={() => openQuickAdd()}>
+          <Plus aria-hidden="true" />
+        </Button>
+        <Button aria-label="Akun" className={tab === 'accounts' ? 'active' : ''} size="icon" type="button" variant="ghost" onClick={() => setTab('accounts')}>
+          <Settings aria-hidden="true" />
+          <span>Akun</span>
+        </Button>
+      </nav>
 
       {quickAddOpen && (
         <QuickAddDialog
@@ -367,22 +380,22 @@ function DashboardTab({
   accounts,
   categories,
   filters,
-  filtersOpen,
+  filterDrawer,
   formatMoney,
   reportTotals,
   setFilters,
-  setFiltersOpen,
+  setFilterDrawer,
   topCategories,
   transactions,
 }: {
   accounts: Account[]
   categories: Category[]
   filters: ReportFilters
-  filtersOpen: boolean
+  filterDrawer: FilterDrawer
   formatMoney: FormatMoney
   reportTotals: { income: number; expense: number; net: number }
   setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
-  setFiltersOpen: React.Dispatch<React.SetStateAction<boolean>>
+  setFilterDrawer: React.Dispatch<React.SetStateAction<FilterDrawer>>
   topCategories: Array<{ category: Category; amount: number }>
   transactions: MoneyTransaction[]
 }) {
@@ -397,16 +410,22 @@ function DashboardTab({
           <h2>{formatMonthLabel(filters.month)}</h2>
         </div>
         <div className="filter-chips" aria-label="Active filters">
-          <span>{selectedAccount?.name || 'Semua Akun'}</span>
-          <span>{selectedCategory ? `${selectedCategory.icon} ${selectedCategory.name}` : 'Semua Kategori'}</span>
-          <span>{filters.type === 'all' ? 'Semua Tipe' : filters.type}</span>
+          <button type="button" onClick={() => setFilterDrawer('account')}>{selectedAccount?.name || 'Semua Akun'}</button>
+          <button type="button" onClick={() => setFilterDrawer('category')}>{selectedCategory ? `${selectedCategory.icon} ${selectedCategory.name}` : 'Semua Kategori'}</button>
+          <button type="button" onClick={() => setFilterDrawer('type')}>{filters.type === 'all' ? 'Semua Tipe' : filters.type}</button>
         </div>
-        <Button size="sm" variant="outline" type="button" onClick={() => setFiltersOpen((current) => !current)}>
-          {filtersOpen ? 'Tutup Filter' : 'Filter'}
-        </Button>
       </Card>
 
-      {filtersOpen && <ReportFiltersPanel compact accounts={accounts} categories={categories} filters={filters} setFilters={setFilters} />}
+      {filterDrawer && (
+        <FilterDrawerSheet
+          accounts={accounts}
+          categories={categories}
+          filter={filterDrawer}
+          filters={filters}
+          onClose={() => setFilterDrawer(null)}
+          setFilters={setFilters}
+        />
+      )}
 
       <OverviewPanel formatMoney={formatMoney} totals={reportTotals} />
 
@@ -415,6 +434,68 @@ function DashboardTab({
         <TransactionsPanel compact accounts={accounts} categories={categories} formatMoney={formatMoney} onDelete={null} title="Recent Activity" transactions={transactions.slice(0, 3)} />
       </section>
     </section>
+  )
+}
+
+function FilterDrawerSheet({
+  accounts,
+  categories,
+  filter,
+  filters,
+  onClose,
+  setFilters,
+}: {
+  accounts: Account[]
+  categories: Category[]
+  filter: Exclude<FilterDrawer, null>
+  filters: ReportFilters
+  onClose: () => void
+  setFilters: React.Dispatch<React.SetStateAction<ReportFilters>>
+}) {
+  const title = filter === 'account' ? 'Pilih Akun' : filter === 'category' ? 'Pilih Kategori' : 'Pilih Tipe'
+
+  function choose(update: Partial<ReportFilters>) {
+    setFilters((current) => ({ ...current, ...update }))
+    onClose()
+  }
+
+  return (
+    <div className="dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <Card className="quick-dialog filter-drawer" role="dialog" aria-modal="true" aria-labelledby="filter-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="quick-dialog-header">
+          <div>
+            <CardTitle id="filter-title">{title}</CardTitle>
+            <CardDescription>Filter dashboard secara cepat.</CardDescription>
+          </div>
+          <Button aria-label="Tutup" size="icon" variant="ghost" type="button" onClick={onClose}>
+            <X aria-hidden="true" />
+          </Button>
+        </div>
+
+        <div className="filter-options">
+          {filter === 'account' && (
+            <>
+              <button className={!filters.accountId ? 'active' : ''} type="button" onClick={() => choose({ accountId: '' })}>Semua Akun</button>
+              {accounts.map((account) => <button className={filters.accountId === account.id ? 'active' : ''} key={account.id} type="button" onClick={() => choose({ accountId: account.id })}>{account.name}</button>)}
+            </>
+          )}
+          {filter === 'category' && (
+            <>
+              <button className={!filters.categoryId ? 'active' : ''} type="button" onClick={() => choose({ categoryId: '' })}>Semua Kategori</button>
+              {categories.map((category) => <button className={filters.categoryId === category.id ? 'active' : ''} key={category.id} type="button" onClick={() => choose({ categoryId: category.id })}>{category.icon} {category.name}</button>)}
+            </>
+          )}
+          {filter === 'type' && (
+            <>
+              <button className={filters.type === 'all' ? 'active' : ''} type="button" onClick={() => choose({ type: 'all' })}>Semua Tipe</button>
+              <button className={filters.type === 'income' ? 'active' : ''} type="button" onClick={() => choose({ type: 'income' })}>Income</button>
+              <button className={filters.type === 'expense' ? 'active' : ''} type="button" onClick={() => choose({ type: 'expense' })}>Expense</button>
+              <button className={filters.type === 'transfer' ? 'active' : ''} type="button" onClick={() => choose({ type: 'transfer' })}>Transfer</button>
+            </>
+          )}
+        </div>
+      </Card>
+    </div>
   )
 }
 
@@ -434,10 +515,10 @@ function OverviewPanel({ formatMoney, totals }: { formatMoney: FormatMoney; tota
           <span>Expense</span>
           <strong className="expense">{formatMoney(totals.expense)}</strong>
         </div>
-        <div>
-          <span>Net</span>
-          <strong className={totals.net >= 0 ? 'income' : 'expense'}>{formatMoney(totals.net)}</strong>
-        </div>
+      </div>
+      <div className="net-row">
+        <span>Net Cashflow</span>
+        <strong className={totals.net >= 0 ? 'income' : 'expense'}>{formatMoney(totals.net)}</strong>
       </div>
     </Card>
   )
@@ -908,6 +989,16 @@ function formatMonthLabel(month: string) {
     month: 'long',
     year: 'numeric',
   }).format(new Date(year, monthIndex - 1, 1))
+}
+
+function getMoneyParts(value: string) {
+  const trimmed = value.trim()
+  const match = trimmed.match(/^([^\d\-+]*)(.*)$/)
+
+  return {
+    symbol: match?.[1]?.trim() || '',
+    amount: (match?.[2] || trimmed).trim(),
+  }
 }
 
 export default App
